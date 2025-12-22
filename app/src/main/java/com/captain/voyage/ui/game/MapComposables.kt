@@ -91,6 +91,14 @@ fun WorldMapView(
 
             // 3. 배(Ship) 그리기
             ship?.let {
+                // [Debug] 좌표 텍스트 출력
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = "Ship: (${it.posX.toInt()}, ${it.posY.toInt()}) / Dest: (${it.destX?.toInt()}, ${it.destY?.toInt()})",
+                    topLeft = Offset(20f, 20f),
+                    style = TextStyle(color = Color.Black, fontSize = 16.sp)
+                )
+
                 translate(left = it.posX.toFloat(), top = it.posY.toFloat()) {
                     val shipPath = Path().apply {
                         moveTo(0f, -15.dp.toPx()) // 위쪽 꼭짓점

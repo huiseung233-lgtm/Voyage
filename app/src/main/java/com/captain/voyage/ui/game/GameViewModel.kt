@@ -14,6 +14,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlin.math.sqrt
+
 @HiltViewModel
 class GameViewModel @Inject constructor(
     private val repository: VoyageRepository
@@ -22,6 +29,16 @@ class GameViewModel @Inject constructor(
     // 1. 실시간 데이터 관찰
     val ship = repository.ship.asLiveData()
     val userStatus = repository.userStatus.asLiveData()
+    
+    // 현재 항구에 있는지 여부 판별 (반경 50.0 이내면 도착으로 간주)
+    val isAtPort: StateFlow<Boolean> = combine(repository.ship, repository.allPorts) { ship, ports ->
+        if (ship == null) return@combine false
+        ports.any { port ->
+            val dx = port.posX - ship.posX
+            val dy = port.posY - ship.posY
+            sqrt(dx * dx + dy * dy) <= 50.0
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     // 2. UI 알림을 위한 LiveData
     private val _toastMessage = MutableLiveData<String>()
@@ -30,22 +47,29 @@ class GameViewModel @Inject constructor(
     // ★ [수정됨] skinId를 문자열("0")로 변경하여 타입 에러 해결
     init {
         viewModelScope.launch {
-            val currentShip = repository.ship.first()
-            if (currentShip == null) {
-                val defaultShip = Ship(
-                    id = 1,
-                    name = "나의 황금선",
-                    level = 1,
-                    exp = 0,
-                    skinId = "0", // 여기가 숫자 0에서 문자열 "0"으로 바뀌었습니다!
-                    status = ShipStatus.ANCHORED // 기본값 정박으로 변경
-                )
-                repository.saveShip(defaultShip)
-            } else {
-                // 앱 재실행 시, 만약 항해 중 상태라면 루프 재시작 (Repository에 위임)
-                if (currentShip.status == ShipStatus.SAILING) {
-                    repository.startVoyage()
+            try {
+                val currentShip = repository.ship.first()
+                if (currentShip == null) {
+                    val defaultShip = Ship(
+                        id = 1,
+                        name = "나의 황금선",
+                        level = 1,
+                        exp = 0,
+                        skinId = "0",
+                        status = ShipStatus.ANCHORED,
+                        posX = 50.0,
+                        posY = 50.0
+                    )
+                    repository.saveShip(defaultShip)
+                } else {
+                    // 앱 재실행 시, 만약 항해 중 상태라면 루프 재시작 (Repository에 위임)
+                    if (currentShip.status == ShipStatus.SAILING) {
+                        repository.startVoyage()
+                    }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _toastMessage.postValue("데이터 로드 중 오류 발생: ${e.message}")
             }
         }
     }
@@ -94,14 +118,24 @@ class GameViewModel @Inject constructor(
         val isMorning = TimeManager.isMorningSailing()
 
         viewModelScope.launch {
-            val updatedShip = currentShip.copy(status = ShipStatus.SAILING)
-            repository.saveShip(updatedShip)
-            repository.startVoyage() // 중앙 엔진 가동!
+            // 1. [New] 어제 성과 정산 (일일 정산)
+            val isSuccess = repository.checkYesterdaySuccess()
+            val resultMsg = repository.settleDailySailing(isSuccess = isSuccess)
+
+            // 2. 오늘의 항해 시작
+            // 중요: 정산으로 좌표가 바뀌었으므로, 최신 데이터를 다시 가져와서 상태를 변경해야 함
+            val refreshedShip = repository.ship.first()
+            if (refreshedShip != null) {
+                val sailingShip = refreshedShip.copy(status = ShipStatus.SAILING)
+                repository.saveShip(sailingShip)
+                repository.startVoyage() // 중앙 엔진 가동!
+            }
 
             if (isMorning) {
-                _toastMessage.value = "☀️ 좋은 아침입니다! 성실 보너스를 획득했습니다!"
+                val statusMsg = if (isSuccess) "🎉 목표 달성 성공!" else "☁️ 목표 달성 실패..."
+                _toastMessage.value = "☀️ 아침 점호 완료! $statusMsg\n$resultMsg"
             } else {
-                _toastMessage.value = "🌊 안전하게 재출항합니다."
+                _toastMessage.value = "🌊 $resultMsg"
             }
         }
     }

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.LocalDate // Added
 import kotlin.math.sqrt
 
 class VoyageRepository(
@@ -143,8 +144,8 @@ class VoyageRepository(
         if (currentPorts.isEmpty()) {
             val dummyPorts = listOf(
                 Port(id = 1, name = "시작의 항구", description = "모든 여행이 시작되는 곳", posX = 100.0, posY = 100.0),
-                Port(id = 2, name = "희망의 섬", description = "풍부한 자원이 잠들어 있는 섬", posX = 500.0, posY = 300.0),
-                Port(id = 3, name = "거친 파도 항구", description = "숙련된 선원들만 머무는 곳", posX = 200.0, posY = 600.0)
+                Port(id = 2, name = "희망의 섬", description = "풍부한 자원이 잠들어 있는 섬", posX = 800.0, posY = 400.0), // 멀리 이동
+                Port(id = 3, name = "거친 파도 항구", description = "숙련된 선원들만 머무는 곳", posX = 300.0, posY = 1200.0) // 아주 멀리 이동
             )
             portDao.insertPorts(dummyPorts)
         }
@@ -170,9 +171,6 @@ class VoyageRepository(
             }
         }
 
-        // 2. 목적지 업데이트 및 상태 변경 (출항 준비 완료)
-        // 주의: 여기서 status를 바로 SAILING으로 바꾸지는 않음. 사용자가 '출항하기'를 눌러야 함.
-        // 하지만 이미 항해 중이라면 즉시 경로 변경됨.
         val updatedShip = currentShip.copy(
             destX = destX,
             destY = destY
@@ -184,12 +182,81 @@ class VoyageRepository(
     // 6. [New] 항해 엔진 (Voyage Engine) - 중앙 제어
     // ----------------------------------------------------------------
 
+    // [New] 어제 목표 달성 여부 확인
+    suspend fun checkYesterdaySuccess(): Boolean {
+        val yesterday = LocalDate.now().minusDays(1).toString()
+        
+        // 어제 기록
+        val dailyLog = dailyLogDao.getLogDirect(yesterday)
+        val yesterdayScore = dailyLog?.totalScore ?: 0
+        
+        // 목표 점수
+        val dailyGoal = goalDao.getGoalByType(GoalType.DAILY)
+        val targetScore = dailyGoal?.targetScore ?: 100
+        
+        return yesterdayScore >= targetScore
+    }
+
+    // 일일 정산 및 실제 이동 (Daily Settle)
+    suspend fun settleDailySailing(isSuccess: Boolean): String {
+        val currentShip = voyageDao.getShip().first() ?: return "선박 정보 없음"
+        
+        // 이동 거리 계산 (성공 시 100, 실패 시 50)
+        val moveDistance = if (isSuccess) 100.0 else 50.0
+        
+        // 목적지가 없으면 이동 불가
+        if (currentShip.destX == null || currentShip.destY == null) {
+            return "목적지 없음 (X:${currentShip.destX}, Y:${currentShip.destY})"
+        }
+
+        val dx = currentShip.destX - currentShip.posX
+        val dy = currentShip.destY - currentShip.posY
+        val totalDistance = sqrt(dx * dx + dy * dy)
+        
+        // 디버그: 거리가 너무 짧아서 이미 도착한 것으로 간주되는지 확인
+        if (totalDistance < 1.0) {
+             return "이미 목적지에 있습니다. (거리: $totalDistance)"
+        }
+        
+        var newX = currentShip.posX
+        var newY = currentShip.posY
+        var newDestX = currentShip.destX
+        var newDestY = currentShip.destY
+        var newStatus = currentShip.status
+        var message = ""
+
+        if (totalDistance <= moveDistance) {
+            // 이번 턴에 도착 가능
+            newX = currentShip.destX
+            newY = currentShip.destY
+            newDestX = null
+            newDestY = null
+            newStatus = ShipStatus.ANCHORED // 도착하면 정박
+            message = "목적지 도착 완료! (이동: ${totalDistance.toInt()}km)"
+        } else {
+            // 이동 중 (벡터 이동)
+            newX = currentShip.posX + (dx / totalDistance) * moveDistance
+            newY = currentShip.posY + (dy / totalDistance) * moveDistance
+            message = "항해 중... ${moveDistance.toInt()}km 전진! (남은 거리: ${(totalDistance - moveDistance).toInt()}km)"
+        }
+
+        val updatedShip = currentShip.copy(
+            posX = newX,
+            posY = newY,
+            destX = newDestX,
+            destY = newDestY,
+            status = newStatus
+        )
+        voyageDao.insertShip(updatedShip)
+        return message
+    }
+
     fun startVoyage() {
         if (sailingJob?.isActive == true) return
 
         sailingJob = externalScope.launch {
             while (isActive) {
-                delay(1000L) // 1초마다 갱신 (테스트용)
+                delay(1000L) // 1초마다 갱신
 
                 val currentShip = voyageDao.getShip().first() ?: break
 
@@ -206,51 +273,13 @@ class VoyageRepository(
                     break
                 }
                 
-                // 이동 로직 (Vector)
-                var newX = currentShip.posX
-                var newY = currentShip.posY
-                var newDestX = currentShip.destX
-                var newDestY = currentShip.destY
-                var newStatus = currentShip.status
-                
-                if (currentShip.destX != null && currentShip.destY != null) {
-                    val dx = currentShip.destX - currentShip.posX
-                    val dy = currentShip.destY - currentShip.posY
-                    val distance = sqrt(dx * dx + dy * dy)
-                    val speed = 5.0 // 이동 속도
-                    
-                    if (distance <= speed) {
-                        // 도착!
-                        newX = currentShip.destX
-                        newY = currentShip.destY
-                        newDestX = null
-                        newDestY = null
-                        newStatus = ShipStatus.ANCHORED // 도착하면 정박
-                    } else {
-                        // 이동 중
-                        newX = currentShip.posX + (dx / distance) * speed
-                        newY = currentShip.posY + (dy / distance) * speed
-                    }
-                } else {
-                    // 목적지가 없으면? 일단 멈춤 (표류하지 않고 대기)
-                    // 만약 '자유 항해' 모드라면 그냥 직진하게 할 수도 있음.
-                    // 현재는 목적지가 없으면 이동하지 않음.
-                }
-
-                // 업데이트 및 저장
+                // [수정] 실제 좌표 이동 로직 제거 (일일 정산으로 이동함)
+                // 식량만 소모 (항해 중임을 표현하기 위해)
                 val newSupplies = currentShip.supplies - 1
                 val updatedShip = currentShip.copy(
-                    posX = newX,
-                    posY = newY,
-                    destX = newDestX,
-                    destY = newDestY,
-                    status = newStatus,
                     supplies = newSupplies
                 )
                 voyageDao.insertShip(updatedShip)
-                
-                // 도착해서 정박했으면 루프 종료
-                if (newStatus == ShipStatus.ANCHORED) break
             }
         }
     }

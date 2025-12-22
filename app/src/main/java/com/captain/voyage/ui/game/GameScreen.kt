@@ -24,11 +24,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator // Added
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -50,6 +52,7 @@ fun GameScreen(
     val ship by viewModel.ship.observeAsState()
     val userStatus by viewModel.userStatus.observeAsState()
     val toastMessage by viewModel.toastMessage.observeAsState()
+    val isAtPort by viewModel.isAtPort.collectAsState()
     val context = LocalContext.current
 
     // Toast Message Handling
@@ -59,11 +62,28 @@ fun GameScreen(
         }
     }
 
+    // [New] 데이터 로딩 대기 (팅김 방지)
+    if (ship == null) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF1A237E)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = Color.White)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("항해 준비 중...", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+        return
+    }
+
     // Determine Colors based on status
     val isSailing = ship?.status == ShipStatus.SAILING
     val targetBackgroundColor = if (isSailing) Color(0xFF29B6F6) else Color(0xFF1A237E)
     val actionButtonColor = if (isSailing) Color(0xFF1565C0) else Color(0xFF4E342E)
-    val actionButtonText = if (isSailing) "⚓ 정박하기 (하루 마감)" else "⛵ 출항하기"
+    
+    // 버튼 문구 변경
+    val actionButtonText = if (isSailing) "⚓ 당직에게 인계하기 (항해 일지 작성)" else "⛵ 출항하기 (항해 시작)"
 
     val backgroundColor by animateColorAsState(
         targetValue = targetBackgroundColor,
@@ -132,12 +152,13 @@ fun GameScreen(
                 Icon(Icons.Default.Close, contentDescription = "Exit", tint = Color(0xFFBF360C))
             }
 
-            // 3. Shop (Only visible when Anchored)
-            if (!isSailing) {
+            // 3. Shop (Only visible when Anchored AND at Port OR Supplies are 0)
+            val supplies = ship?.supplies ?: 0
+            if (!isSailing && (isAtPort || supplies <= 0)) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .offset(x = 60.dp, y = (-100).dp) // Approximate position from XML bias
+                        .offset(x = 60.dp, y = (-100).dp)
                         .size(120.dp)
                         .background(Color(0x80FFEB3B), RoundedCornerShape(8.dp))
                         .clickable {
@@ -145,8 +166,6 @@ fun GameScreen(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                     // Label below handled by column or absolute positioning?
-                     // In XML it was below. Let's put text inside for now.
                      Text(
                          text = "🏪 상점",
                          color = Color.White,
@@ -172,7 +191,7 @@ fun GameScreen(
             ) {
                 Text(
                     text = actionButtonText,
-                    fontSize = 20.sp,
+                    fontSize = 18.sp, // 문구가 길어져서 폰트 크기를 약간 줄임
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )

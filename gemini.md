@@ -32,9 +32,10 @@
 ## 🎮 Detailed Mechanics
 
 ### 🚀 A. 추진력 시스템 (Propulsion Logic)
-사용자의 일일 목표(Daily Goal) 달성 여부가 항해 속도를 결정합니다.
-- **정상 순항 (Full Sail):** 일일 목표 달성 시. 예정된 거리를 이동하며 보급품을 효율적으로 소모합니다.
-- **저속 항행 (Drift):** 목표 미달 시. 이동 거리가 대폭 감소하거나 제자리에 머물며, 식량과 물만 낭비하게 됩니다.
+사용자의 일일 목표(Daily Goal) 달성 여부가 다음 날의 항해 거리를 결정합니다.
+- **성공 (Success):** 어제의 목표를 달성했다면 배가 100km(기본) 전진합니다.
+- **실패 (Fail):** 달성하지 못했다면 배가 50km(절반)만 전진합니다.
+- **아침 점호:** 매일 아침 '출항하기' 버튼을 누르면 정산과 함께 배가 이동하고, 하루 동안은 '항해 중' 상태를 유지합니다.
 
 ### 💰 B. 경제 및 무역 시스템 (Economy & Trade)
 단순한 골드 보상이 아닌, 전략적인 상거래가 핵심입니다.
@@ -76,12 +77,13 @@ com.captain.voyage
 - [x] 항해 일지(Home) 및 목표 관리(Goals) 시스템 구현.
 - [x] 커스텀 목표 및 데이터 일치성 로직 확보.
 
-#### Phase 2: Visualization & Map (진행 중)
-- [ ] **Interactive Map:** 세계 지도 위 내 배의 위치와 항로 표시.
-- [ ] **Sailing Visuals:** 목표 달성 시 배가 전진하는 연출 강화.
+#### Phase 2: Visualization & Map (완료)
+- [x] **Interactive Map:** Canvas 기반의 월드 맵 구현 (격자선, 항구, 배 표시).
+- [x] **Navigation:** 지도 터치 시 목적지 설정 및 자석(Snapping) 기능 구현.
+- [x] **Sailing Engine:** 일일 목표 달성 여부에 따른 이동 거리 계산 및 벡터 이동 로직 구현.
 
-#### Phase 3: Voyage & Trade (핵심 재미 구현)
-- [ ] **Voyage Engine:** 일일 정산 시 이동 거리 계산 및 보급품 차감 로직.
+#### Phase 3: Voyage & Trade (진행 중)
+- [ ] **Daily Briefing:** 아침 점호(정산) 팝업 및 UI 구현.
 - [ ] **Trade System:** 항구 데이터(Port), 교역품(TradeItem) 모델링 및 거래 화면 구현.
 - [ ] **Event System:** 항해 중 무작위 인카운터(Event) 로직 구현.
 
@@ -94,4 +96,5 @@ com.captain.voyage
 ## 📝 Recent Updates
 - **[Refactor]** Fragment 제거 및 Pure Compose 아키텍처로 전환.
 - **[Feature]** 항해 일지 컨셉의 홈 화면 및 커스텀 목표 기능 추가.
-- **[Plan]** 대항해시대 스타일의 무역/항해 시스템으로 기획 전면 개편.
+- **[Feature]** 항해 엔진(Voyage Engine) 탑재 및 지도 목적지 설정 기능 구현.
+- **[Fix]** Deprecated API(Divider, Icons) 수정 및 안정성(Crash Prevention) 확보.
