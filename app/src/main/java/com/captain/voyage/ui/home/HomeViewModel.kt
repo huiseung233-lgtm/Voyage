@@ -3,13 +3,13 @@ package com.captain.voyage.ui.home
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.model.DailyLog
 import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.repository.VoyageRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,8 +17,12 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
-class HomeViewModel(private val repository: VoyageRepository) : ViewModel() {
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val repository: VoyageRepository
+) : ViewModel() {
 
     // 오늘 날짜 (고정)
     private val _todayDate: String = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -30,6 +34,10 @@ class HomeViewModel(private val repository: VoyageRepository) : ViewModel() {
     // 화면 표시용 날짜
     private val _displayDate = MutableStateFlow("")
     val displayDate: StateFlow<String> = _displayDate.asStateFlow()
+
+    // 목표 점수 (임시: 나중에 GoalsRepository에서 가져오도록 수정 필요)
+    private val _targetScore = MutableStateFlow(100)
+    val targetScore: StateFlow<Int> = _targetScore.asStateFlow()
 
     // ★ [New] 알림 클릭 시 로그북 팝업을 띄우기 위한 이벤트 신호
     private val _navigateToLogbook = MutableLiveData<Boolean>()
@@ -113,15 +121,5 @@ class HomeViewModel(private val repository: VoyageRepository) : ViewModel() {
             val logs = repository.getMonthlyLogs(yearMonth)
             _monthlyLogs.value = logs
         }
-    }
-}
-
-class HomeViewModelFactory(private val repository: VoyageRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return HomeViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

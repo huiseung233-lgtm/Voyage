@@ -2,11 +2,13 @@ package com.captain.voyage.ui.settings
 
 import android.app.Application
 import android.content.Context
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.captain.voyage.VoyageApplication
 import com.captain.voyage.utils.NotificationHelper
 import com.captain.voyage.utils.TimeManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalTime
+import javax.inject.Inject
 
 data class SettingsState(
     val limitTime: String = "02:00",
@@ -24,7 +27,10 @@ data class SettingsState(
     val notiInterval: Int = 60
 )
 
-class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context
+) : ViewModel() {
 
     private val PREF_NAME = "voyage_settings"
     private val KEY_LIMIT_TIME = "limit_time"
@@ -33,7 +39,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val KEY_NOTI_ENABLED = "noti_enabled"
     private val KEY_NOTI_INTERVAL = "noti_interval"
 
-    private val prefs = application.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
     private val _uiState = MutableStateFlow(SettingsState())
     val uiState: StateFlow<SettingsState> = _uiState.asStateFlow()
@@ -98,7 +104,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             it.copy(isNotiEnabled = newEnabled, notiInterval = newInterval)
         }
 
-        val context = getApplication<Application>().applicationContext
         if (newEnabled) {
             NotificationHelper.scheduleNotification(context, newInterval)
         } else {
@@ -118,7 +123,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun resetAllData(onComplete: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            (getApplication<VoyageApplication>()).database.clearAllTables()
+            // Hilt 주입으로 Database에 직접 접근하지 않고, Repository나 UseCase를 통해야 하지만,
+            // 지금은 임시로 ApplicationContext를 캐스팅하거나 해야 함.
+            // 하지만 Database 인스턴스를 주입받지 않았으므로 여기서는 VoyageDatabase.getDatabase(context)를 호출.
+            com.captain.voyage.data.local.VoyageDatabase.getDatabase(context).clearAllTables()
             withContext(Dispatchers.Main) {
                 onComplete()
             }

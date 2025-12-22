@@ -130,3 +130,20 @@ com.captain.voyage
     - `compileSdk` 설정을 표준 문법인 `compileSdk = 35`로 수정.
     - `targetSdk`를 안정적인 최신 버전인 `35`로 하향 조정.
 - **Outcome:** 빌드 설정 오류 해결 및 프로젝트 안정성 확보.
+
+### [2025-12-22] Major Architecture & UI Overhaul
+- **Architecture Migration:**
+    - **Hilt Integration:** `Dagger-Hilt` 도입으로 의존성 주입 자동화 및 `ViewModelFactory` 제거.
+    - **Navigation Compose:** 기존 `Fragment` 기반 네비게이션을 제거하고 순수 Compose `NavHost`로 전환. `MainActivity`는 단일 진입점(Single Activity) 역할만 수행.
+    - **Cleanup:** 사용하지 않는 XML 레이아웃(Activity, Fragment, Dialog) 및 View 기반 Kotlin 클래스(Adapter) 전량 삭제.
+- **UI Redesign (Home Tab):**
+    - **Concept:** "항해 일지(Logbook)" 컨셉의 몰입형 UI 구현.
+    - **Layout:** 
+        - 상단 30%: 클릭 가능한 '출항(Sail)' 배너 (배경 이미지 + 그라데이션).
+        - 중앙/하단: 스크롤 가능한 양피지 스타일 카드.
+    - **Features:** 
+        - 일일 목표 달성률 게이지 바(Progress Bar) 추가.
+        - 직관적인 월간 캘린더 그리드 통합 (클릭 시 기록 팝업).
+- **Tech Stack Update:**
+    - `androidx.compose.material3` 적극 활용.
+    - `compileSdk` 및 `targetSdk`를 **36**으로 상향 조정 (최신 라이브러리 호환성).

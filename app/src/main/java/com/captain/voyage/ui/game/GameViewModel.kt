@@ -3,17 +3,21 @@ package com.captain.voyage.ui.game
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.ShipStatus
 import com.captain.voyage.data.repository.VoyageRepository
 import com.captain.voyage.utils.TimeManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class GameViewModel(private val repository: VoyageRepository) : ViewModel() {
+@HiltViewModel
+class GameViewModel @Inject constructor(
+    private val repository: VoyageRepository
+) : ViewModel() {
 
     // 1. 실시간 데이터 관찰
     val ship = repository.ship.asLiveData()
@@ -86,15 +90,5 @@ class GameViewModel(private val repository: VoyageRepository) : ViewModel() {
                 _toastMessage.value = "🌊 안전하게 재출항합니다."
             }
         }
-    }
-}
-
-class GameViewModelFactory(private val repository: VoyageRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(GameViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return GameViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

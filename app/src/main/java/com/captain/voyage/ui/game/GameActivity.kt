@@ -7,14 +7,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.captain.voyage.VoyageApplication
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class GameActivity : AppCompatActivity() {
 
-    // 뷰모델 연결
-    private val viewModel: GameViewModel by viewModels {
-        GameViewModelFactory((application as VoyageApplication).repository)
-    }
+    // 뷰모델 연결 (Hilt가 주입)
+    private val viewModel: GameViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

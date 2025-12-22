@@ -1,18 +1,22 @@
 package com.captain.voyage.ui.rules
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.repository.VoyageRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class RulesViewModel(private val repository: VoyageRepository) : ViewModel() {
+@HiltViewModel
+class RulesViewModel @Inject constructor(
+    private val repository: VoyageRepository
+) : ViewModel() {
 
     // 1. 검색어 상태 (기본값: 빈 문자열)
     private val _searchQuery = MutableStateFlow("")
@@ -79,16 +83,5 @@ class RulesViewModel(private val repository: VoyageRepository) : ViewModel() {
         viewModelScope.launch {
             repository.updateRule(rule)
         }
-    }
-}
-
-// ViewModel을 생성해주는 공장 (Repository를 주입하기 위해 필요)
-class RulesViewModelFactory(private val repository: VoyageRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(RulesViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return RulesViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
