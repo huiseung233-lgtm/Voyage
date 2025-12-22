@@ -17,7 +17,7 @@ import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.ShipInventory // Added
 import com.captain.voyage.data.model.UserStatus
 
-// ★ 버전 7로 변경
+// ★ 버전 8로 변경 (Trade 관련 테이블 추가)
 @Database(
     entities = [
         Rule::class,
@@ -32,7 +32,7 @@ import com.captain.voyage.data.model.UserStatus
         ShipInventory::class,
         PriceHistory::class
     ],
-    version = 7,
+    version = 8, // Version up
     exportSchema = false
 )
 @TypeConverters(Converters::class) // 기존 번역가 유지
@@ -44,9 +44,7 @@ abstract class VoyageDatabase : RoomDatabase() {
     abstract fun dailyLogDao(): DailyLogDao
     abstract fun goalDao(): GoalDao
     abstract fun portDao(): PortDao
-
-    // 2. 신규 DAO 추가 예정 (무역/항해)
-    // abstract fun tradeDao(): TradeDao
+    abstract fun tradeDao(): TradeDao
 
     companion object {
         @Volatile

@@ -5,20 +5,24 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.captain.voyage.data.model.Item
+import com.captain.voyage.data.model.Market
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.ShipStatus
 import com.captain.voyage.data.repository.VoyageRepository
+import com.captain.voyage.ui.trade.MarketItemUi
 import com.captain.voyage.utils.TimeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import javax.inject.Inject
-
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 import kotlin.math.sqrt
 
 @HiltViewModel
@@ -30,21 +34,37 @@ class GameViewModel @Inject constructor(
     val ship = repository.ship.asLiveData()
     val userStatus = repository.userStatus.asLiveData()
     
-    // 현재 항구에 있는지 여부 판별 (반경 50.0 이내면 도착으로 간주)
-    val isAtPort: StateFlow<Boolean> = combine(repository.ship, repository.allPorts) { ship, ports ->
-        if (ship == null) return@combine false
-        ports.any { port ->
+    // 현재 항구 감지 (반경 50.0 이내)
+    // 항구에 도착했다면 해당 Port ID를 반환, 아니면 null
+    val currentPortId: StateFlow<Long?> = combine(repository.ship, repository.allPorts) { ship, ports ->
+        if (ship == null) return@combine null
+        ports.find { port ->
             val dx = port.posX - ship.posX
             val dy = port.posY - ship.posY
             sqrt(dx * dx + dy * dy) <= 50.0
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        }?.id
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // 2. UI 알림을 위한 LiveData
+    val isAtPort = currentPortId.map { it != null }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    // 2. UI 알림
     private val _toastMessage = MutableLiveData<String>()
     val toastMessage: LiveData<String> get() = _toastMessage
 
-    // ★ [수정됨] skinId를 문자열("0")로 변경하여 타입 에러 해결
+    // 3. 아침 점호 (브리핑) 상태
+    private val _briefingData = MutableStateFlow<com.captain.voyage.data.repository.DailyBriefing?>(null)
+    val briefingData: StateFlow<com.captain.voyage.data.repository.DailyBriefing?> = _briefingData.asStateFlow()
+
+    private val _showBriefing = MutableStateFlow(false)
+    val showBriefing: StateFlow<Boolean> = _showBriefing.asStateFlow()
+
+    // 4. [New] 상점 (무역) 상태
+    private val _marketItems = MutableStateFlow<List<MarketItemUi>>(emptyList())
+    val marketItems: StateFlow<List<MarketItemUi>> = _marketItems.asStateFlow()
+
+    private val _showMarketDialog = MutableStateFlow(false)
+    val showMarketDialog: StateFlow<Boolean> = _showMarketDialog.asStateFlow()
+
     init {
         viewModelScope.launch {
             try {
@@ -62,7 +82,6 @@ class GameViewModel @Inject constructor(
                     )
                     repository.saveShip(defaultShip)
                 } else {
-                    // 앱 재실행 시, 만약 항해 중 상태라면 루프 재시작 (Repository에 위임)
                     if (currentShip.status == ShipStatus.SAILING) {
                         repository.startVoyage()
                     }
@@ -74,15 +93,58 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    // 3. 정박 / 출항 토글 기능
-    fun toggleShipStatus() {
-        val currentShip = ship.value
+    // --- 무역 (Trade) ---
 
-        if (currentShip == null) {
-            _toastMessage.value = "⏳ 선박 정보를 불러오는 중입니다..."
+    fun openMarket() {
+        val portId = currentPortId.value
+        if (portId == null) {
+            // 항구가 아닌데 상점을 열려고 함 (식량 부족 치트용)
+            refillSupplies()
             return
         }
 
+        viewModelScope.launch {
+            // 해당 항구의 마켓 데이터 구독 시작
+            repository.getMarketDataFlow(portId).collect { list ->
+                val uiItems = list.map { (market, item, qty) ->
+                    MarketItemUi(item, market, qty)
+                }
+                _marketItems.value = uiItems
+            }
+        }
+        _showMarketDialog.value = true
+    }
+
+    fun closeMarket() {
+        _showMarketDialog.value = false
+    }
+
+    fun buyItem(itemUi: MarketItemUi, quantity: Int) {
+        viewModelScope.launch {
+            val success = repository.buyItem(itemUi.item.id, itemUi.market.buyPrice, quantity)
+            if (success) {
+                _toastMessage.value = "${itemUi.item.name} 구매 완료!"
+            } else {
+                _toastMessage.value = "골드가 부족합니다!"
+            }
+        }
+    }
+
+    fun sellItem(itemUi: MarketItemUi, quantity: Int) {
+        viewModelScope.launch {
+            val success = repository.sellItem(itemUi.item.id, itemUi.market.sellPrice, quantity)
+            if (success) {
+                _toastMessage.value = "${itemUi.item.name} 판매 완료!"
+            } else {
+                _toastMessage.value = "재고가 부족합니다!"
+            }
+        }
+    }
+
+    // --- 항해 및 점호 ---
+
+    fun toggleShipStatus() {
+        val currentShip = ship.value ?: return
         if (currentShip.status == ShipStatus.SAILING) {
             dockShip(currentShip)
         } else {
@@ -92,55 +154,58 @@ class GameViewModel @Inject constructor(
 
     private fun dockShip(currentShip: Ship) {
         viewModelScope.launch {
-            repository.stopVoyage() // 루프 중단 요청
+            repository.stopVoyage()
             val updatedShip = currentShip.copy(status = ShipStatus.ANCHORED)
             repository.saveShip(updatedShip)
-
-            // 안전하게 toString() 유지
             val effectiveDate = TimeManager.getEffectiveDate().toString()
-            _toastMessage.value = "⚓ 정박 완료! ($effectiveDate 기록 마감)"
+            _toastMessage.value = "⚓ 정박 완료! (${effectiveDate} 기록 마감)"
         }
     }
 
     private fun sailShip(currentShip: Ship) {
-        // [테스트를 위해 시간 제한 잠시 해제 가능] - 원칙대로라면 유지
         if (!TimeManager.canSail()) {
-            _toastMessage.value = "⛔ 지금은 선박 정비 시간(02:00~07:00)입니다. 출항할 수 없습니다."
-            // return // 개발 테스트 중에는 주석 처리하여 언제든 출항 가능하게 함
+            _toastMessage.value = "⛔ 선박 정비 시간(02:00~07:00)입니다."
         }
-        
-        // 식량 체크
         if (currentShip.supplies <= 0) {
              _toastMessage.value = "식량이 부족하여 출항할 수 없습니다!"
              return
         }
 
-        val isMorning = TimeManager.isMorningSailing()
-
         viewModelScope.launch {
-            // 1. [New] 어제 성과 정산 (일일 정산)
-            val isSuccess = repository.checkYesterdaySuccess()
-            val resultMsg = repository.settleDailySailing(isSuccess = isSuccess)
+            val data = repository.getYesterdayBriefing()
+            _briefingData.value = data
+            _showBriefing.value = true
+        }
+    }
 
-            // 2. 오늘의 항해 시작
-            // 중요: 정산으로 좌표가 바뀌었으므로, 최신 데이터를 다시 가져와서 상태를 변경해야 함
+    fun confirmBriefingAndSail(hasConfessed: Boolean) {
+        val data = _briefingData.value ?: return
+        viewModelScope.launch {
+            _showBriefing.value = false
+            
+            val finalSuccess = data.isSuccess && !hasConfessed
+            val resultMsg = repository.settleDailySailing(isSuccess = finalSuccess)
+
             val refreshedShip = repository.ship.first()
             if (refreshedShip != null) {
                 val sailingShip = refreshedShip.copy(status = ShipStatus.SAILING)
                 repository.saveShip(sailingShip)
-                repository.startVoyage() // 중앙 엔진 가동!
+                repository.startVoyage()
             }
 
-            if (isMorning) {
-                val statusMsg = if (isSuccess) "🎉 목표 달성 성공!" else "☁️ 목표 달성 실패..."
-                _toastMessage.value = "☀️ 아침 점호 완료! $statusMsg\n$resultMsg"
-            } else {
-                _toastMessage.value = "🌊 $resultMsg"
+            val statusMsg = when {
+                hasConfessed -> "🚨 규율 위반 처리됨"
+                finalSuccess -> "🎉 목표 달성 성공!"
+                else -> "☁️ 목표 달성 실패..."
             }
+            _toastMessage.value = "☀️ 아침 점호 완료! $statusMsg\n$resultMsg"
         }
     }
 
-    // 치트용 식량 보충 함수
+    fun dismissBriefing() {
+        _showBriefing.value = false
+    }
+
     fun refillSupplies() {
         viewModelScope.launch {
             val currentShip = repository.ship.first() ?: return@launch

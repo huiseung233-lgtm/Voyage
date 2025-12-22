@@ -28,11 +28,11 @@
             </intent-filter>
         </activity>
 
-        <!-- 2. 게임 액티비티 (가로 모드 고정) -->
+        <!-- 2. 게임 액티비티 (세로 모드 고정 - 테스트용) -->
         <activity
             android:name=".ui.game.GameActivity"
             android:exported="false"
-            android:screenOrientation="landscape"
+            android:screenOrientation="portrait"
             tools:ignore="LockedOrientationActivity"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
 

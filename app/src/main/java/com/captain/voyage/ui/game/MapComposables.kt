@@ -6,6 +6,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -29,10 +31,34 @@ fun WorldMapView(
     onMapClick: ((Float, Float) -> Unit)? = null
 ) {
     val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    
+    // [Optimization] 렌더링 객체 캐싱
+    val shipPath = remember(density) {
+        with(density) {
+            Path().apply {
+                moveTo(0f, -15.dp.toPx()) // 위
+                lineTo(-10.dp.toPx(), 10.dp.toPx()) // 좌하
+                lineTo(10.dp.toPx(), 10.dp.toPx()) // 우하
+                close()
+            }
+        }
+    }
+    
+    val dashPathEffect = remember(density) {
+        with(density) {
+            PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 10.dp.toPx()), 0f)
+        }
+    }
+    
+    val gridColor = Color(0x40000000)
+    val oceanColor = Color(0xFF81D4FA)
+    val shipColor = Color(0xFFD32F2F)
+    val portColor = Color(0xFF5D4037)
 
     Box(
         modifier = modifier
-            .background(Color(0xFF81D4FA)) // 바다 색상 (Light Blue)
+            .background(oceanColor)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     onMapClick?.invoke(offset.x, offset.y)
@@ -40,30 +66,36 @@ fun WorldMapView(
             }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // 1. 격자선 (Grid Lines) 그리기
             val gridSize = 100.dp.toPx()
-            for (x in 0..size.width.toInt() step gridSize.toInt()) {
-                drawLine(Color(0x40000000), Offset(x.toFloat(), 0f), Offset(x.toFloat(), size.height), strokeWidth = 1f)
+            val width = size.width
+            val height = size.height
+
+            // 1. 격자선 (Grid Lines)
+            // 화면 밖의 격자선은 그리지 않는 최적화도 가능하지만, 현재는 전체 순회
+            for (x in 0..width.toInt() step gridSize.toInt()) {
+                drawLine(gridColor, Offset(x.toFloat(), 0f), Offset(x.toFloat(), height), strokeWidth = 1f)
             }
-            for (y in 0..size.height.toInt() step gridSize.toInt()) {
-                drawLine(Color(0x40000000), Offset(0f, y.toFloat()), Offset(size.width, y.toFloat()), strokeWidth = 1f)
+            for (y in 0..height.toInt() step gridSize.toInt()) {
+                drawLine(gridColor, Offset(0f, y.toFloat()), Offset(width, y.toFloat()), strokeWidth = 1f)
             }
 
-            // 2-1. 목적지 경로 그리기 (배 -> 목적지)
+            // 2-1. 목적지 경로 그리기
             ship?.let {
                 if (it.destX != null && it.destY != null) {
+                    val start = Offset(it.posX.toFloat(), it.posY.toFloat())
+                    val end = Offset(it.destX!!.toFloat(), it.destY!!.toFloat())
+                    
                     drawLine(
-                        color = Color(0xFFD32F2F),
-                        start = Offset(it.posX.toFloat(), it.posY.toFloat()),
-                        end = Offset(it.destX!!.toFloat(), it.destY!!.toFloat()),
+                        color = shipColor,
+                        start = start,
+                        end = end,
                         strokeWidth = 2.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        pathEffect = dashPathEffect
                     )
-                    // 목적지 표시 X
                     drawCircle(
-                        color = Color(0xFFD32F2F),
+                        color = shipColor,
                         radius = 4.dp.toPx(),
-                        center = Offset(it.destX!!.toFloat(), it.destY!!.toFloat()),
+                        center = end,
                         style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
                     )
                 }
@@ -73,14 +105,12 @@ fun WorldMapView(
             ports.forEach { port ->
                 val center = Offset(port.posX.toFloat(), port.posY.toFloat())
                 
-                // 항구 아이콘 (원)
                 drawCircle(
-                    color = Color(0xFF5D4037), // 갈색
+                    color = portColor,
                     radius = 8.dp.toPx(),
                     center = center
                 )
 
-                // 항구 이름 텍스트
                 drawText(
                     textMeasurer = textMeasurer,
                     text = port.name,
@@ -91,25 +121,8 @@ fun WorldMapView(
 
             // 3. 배(Ship) 그리기
             ship?.let {
-                // [Debug] 좌표 텍스트 출력
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text = "Ship: (${it.posX.toInt()}, ${it.posY.toInt()}) / Dest: (${it.destX?.toInt()}, ${it.destY?.toInt()})",
-                    topLeft = Offset(20f, 20f),
-                    style = TextStyle(color = Color.Black, fontSize = 16.sp)
-                )
-
                 translate(left = it.posX.toFloat(), top = it.posY.toFloat()) {
-                    val shipPath = Path().apply {
-                        moveTo(0f, -15.dp.toPx()) // 위쪽 꼭짓점
-                        lineTo(-10.dp.toPx(), 10.dp.toPx()) // 왼쪽 아래
-                        lineTo(10.dp.toPx(), 10.dp.toPx()) // 오른쪽 아래
-                        close()
-                    }
-                    drawPath(
-                        path = shipPath,
-                        color = Color(0xFFD32F2F) // 빨간색 배
-                    )
+                    drawPath(path = shipPath, color = shipColor)
                 }
             }
         }

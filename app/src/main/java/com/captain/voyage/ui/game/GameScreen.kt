@@ -24,7 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator // Added
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.sp
 import com.captain.voyage.data.model.PenaltyType
 import com.captain.voyage.data.model.ShipStatus
 import com.captain.voyage.ui.theme.VoyageTheme
+import com.captain.voyage.ui.trade.TradeDialog
+import com.captain.voyage.ui.trade.MarketItemUi
 
 @Composable
 fun GameScreen(
@@ -53,6 +55,14 @@ fun GameScreen(
     val userStatus by viewModel.userStatus.observeAsState()
     val toastMessage by viewModel.toastMessage.observeAsState()
     val isAtPort by viewModel.isAtPort.collectAsState()
+    
+    val showBriefing by viewModel.showBriefing.collectAsState()
+    val briefingData by viewModel.briefingData.collectAsState()
+    
+    val showMarketDialog by viewModel.showMarketDialog.collectAsState()
+    val marketItems by viewModel.marketItems.collectAsState()
+    val currentPortId by viewModel.currentPortId.collectAsState()
+    
     val context = LocalContext.current
 
     // Toast Message Handling
@@ -162,7 +172,7 @@ fun GameScreen(
                         .size(120.dp)
                         .background(Color(0x80FFEB3B), RoundedCornerShape(8.dp))
                         .clickable {
-                            viewModel.refillSupplies()
+                            viewModel.openMarket()
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -191,11 +201,34 @@ fun GameScreen(
             ) {
                 Text(
                     text = actionButtonText,
-                    fontSize = 18.sp, // 문구가 길어져서 폰트 크기를 약간 줄임
+                    fontSize = 18.sp, 
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
             }
+        }
+
+        // [New] 아침 점호 다이얼로그
+        if (showBriefing && briefingData != null) {
+            DailyBriefingDialog(
+                data = briefingData!!,
+                onConfirm = { hasConfessed -> 
+                    viewModel.confirmBriefingAndSail(hasConfessed) 
+                },
+                onDismiss = { viewModel.dismissBriefing() }
+            )
+        }
+        
+        // [New] 무역 다이얼로그
+        if (showMarketDialog) {
+            TradeDialog(
+                portName = "항구 #${currentPortId ?: "?"}",
+                gold = userStatus?.gold ?: 0,
+                marketItems = marketItems,
+                onBuy = { item, qty -> viewModel.buyItem(item, qty) },
+                onSell = { item, qty -> viewModel.sellItem(item, qty) },
+                onDismiss = { viewModel.closeMarket() }
+            )
         }
     }
 }

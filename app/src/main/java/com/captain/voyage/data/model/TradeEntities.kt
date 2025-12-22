@@ -1,34 +1,51 @@
 package com.captain.voyage.data.model
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
-// 물품의 종류 (식량, 수리 자재, 교역품 등)
-enum class ItemType {
-    SUPPLY,     // 식량/물
-    MATERIAL,   // 건설 자재
-    TRADE_GOOD  // 일반 교역품
-}
-
+// 1. 교역품 (Item)
 @Entity(tableName = "items")
 data class Item(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val name: String,
-    val type: ItemType,
-    val basePrice: Int, // 기본 가격
-    val weight: Int     // 무게 (적재량 제한용)
+    val name: String,        // 예: "쌀", "후추", "비단"
+    val basePrice: Int,      // 기본 가격
+    val description: String,
+    val type: ItemType = ItemType.TRADE_GOOD // 무역품, 소비품 등 구분
 )
 
+enum class ItemType {
+    TRADE_GOOD, // 교역품 (시세 차익용)
+    SUPPLY,     // 보급품 (식량, 물 - 직접 사용 가능)
+    EQUIPMENT   // 장비 (대포 등)
+}
+
+// 2. 항구별 시장 (Market)
+// 어떤 항구에서, 어떤 아이템을, 얼마에 파는가?
 @Entity(
     tableName = "markets",
-    primaryKeys = ["portId", "itemId"] // 복합키: 항구당 물건은 하나씩만 존재
+    primaryKeys = ["portId", "itemId"],
+    foreignKeys = [
+        ForeignKey(entity = Port::class, parentColumns = ["id"], childColumns = ["portId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = Item::class, parentColumns = ["id"], childColumns = ["itemId"], onDelete = ForeignKey.CASCADE)
+    ]
 )
 data class Market(
     val portId: Long,
     val itemId: Long,
-    val buyPrice: Int,  // 유저가 살 때 가격
-    val sellPrice: Int, // 유저가 팔 때 가격
-    val stock: Int,     // 항구 재고
-    val volatility: Float = 0.1f // 변동성 (0.0 ~ 1.0)
+    val buyPrice: Int,   // 선장이 살 때 가격 (항구 -> 선장)
+    val sellPrice: Int,  // 선장이 팔 때 가격 (선장 -> 항구)
+    val stock: Int       // 항구의 재고량 (매진될 수 있음)
+)
+
+// 3. 시세 기록 (PriceHistory) - 나중에 그래프 그리기용
+@Entity(tableName = "price_history")
+data class PriceHistory(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val portId: Long,
+    val itemId: Long,
+    val price: Int,
+    val timestamp: Long
 )
