@@ -45,6 +45,7 @@ import com.captain.voyage.data.model.ShipStatus
 import com.captain.voyage.ui.theme.VoyageTheme
 import com.captain.voyage.ui.trade.TradeDialog
 import com.captain.voyage.ui.trade.MarketItemUi
+import com.captain.voyage.ui.settlement.SettlementDialog // Added
 
 @Composable
 fun GameScreen(
@@ -61,7 +62,10 @@ fun GameScreen(
     
     val showMarketDialog by viewModel.showMarketDialog.collectAsState()
     val marketItems by viewModel.marketItems.collectAsState()
+    
+    val showSettlementDialog by viewModel.showSettlementDialog.collectAsState() // Added
     val currentPortId by viewModel.currentPortId.collectAsState()
+    val currentPort by viewModel.currentPort.collectAsState() // Added
     
     val context = LocalContext.current
 
@@ -111,7 +115,8 @@ fun GameScreen(
             Card(
                 modifier = Modifier
                     .padding(16.dp)
-                    .align(Alignment.TopStart),
+                    .align(Alignment.TopStart)
+                    .clickable { viewModel.giveMeGold() }, // [Cheat] 클릭 시 골드 획득
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFD7CCC8)),
                 elevation = CardDefaults.cardElevation(8.dp)
@@ -162,9 +167,10 @@ fun GameScreen(
                 Icon(Icons.Default.Close, contentDescription = "Exit", tint = Color(0xFFBF360C))
             }
 
-            // 3. Shop (Only visible when Anchored AND at Port OR Supplies are 0)
+            // 3. Shop & Settlement (Only visible when Anchored AND at Port)
             val supplies = ship?.supplies ?: 0
             if (!isSailing && (isAtPort || supplies <= 0)) {
+                // 상점 버튼 (오른쪽)
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -185,6 +191,31 @@ fun GameScreen(
                              .background(Color(0x80000000))
                              .padding(4.dp)
                      )
+                }
+
+                // [New] 정착지 버튼 (왼쪽) - 신대륙(본토)에서만 가능
+                if (currentPort?.canEstablishSettlement == true) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .offset(x = (-60).dp, y = (-100).dp)
+                            .size(120.dp)
+                            .background(Color(0x808D6E63), RoundedCornerShape(8.dp))
+                            .clickable {
+                                viewModel.openSettlement()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "🏰 정착지",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .background(Color(0x80000000))
+                                .padding(4.dp)
+                        )
+                    }
                 }
             }
 
@@ -228,6 +259,15 @@ fun GameScreen(
                 onBuy = { item, qty -> viewModel.buyItem(item, qty) },
                 onSell = { item, qty -> viewModel.sellItem(item, qty) },
                 onDismiss = { viewModel.closeMarket() }
+            )
+        }
+
+        // [New] 정착지 다이얼로그
+        if (showSettlementDialog) {
+            SettlementDialog(
+                portId = currentPortId ?: 0, // 0이면 예외처리 혹은 시작항구
+                portName = "항구 #${currentPortId ?: "?"}",
+                onDismiss = { viewModel.closeSettlement() }
             )
         }
     }

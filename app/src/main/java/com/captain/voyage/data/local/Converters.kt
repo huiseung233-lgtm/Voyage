@@ -1,12 +1,28 @@
 package com.captain.voyage.data.local
 
 import androidx.room.TypeConverter
+import com.captain.voyage.data.model.BuildingType // Added
 import com.captain.voyage.data.model.ScoreRecord
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
 class Converters {
     private val gson = Gson()
+
+    // --- BuildingType Enum 변환기 ---
+    @TypeConverter
+    fun fromBuildingType(value: BuildingType): String {
+        return value.name
+    }
+
+    @TypeConverter
+    fun toBuildingType(value: String): BuildingType {
+        return try {
+            BuildingType.valueOf(value)
+        } catch (e: IllegalArgumentException) {
+            BuildingType.HEADQUARTERS // 기본값 혹은 에러 처리
+        }
+    }
 
     // --- List<ScoreRecord> 변환기 (DailyLog용) ---
     @TypeConverter

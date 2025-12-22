@@ -9,13 +9,26 @@ import androidx.room.ForeignKey
     tableName = "ship_inventory",
     primaryKeys = ["shipId", "itemId"],
     foreignKeys = [
-        // Ship 엔티티의 ID 타입(Int)과 맞춰야 함. Ship.id가 Int라면 여기서도 Int여야 함.
-        // 현재 Ship.id는 Int, Item.id는 Long임.
-        // 외래키 참조 시 타입 불일치 주의.
+        ForeignKey(
+            entity = Ship::class,
+            parentColumns = ["id"],
+            childColumns = ["shipId"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = Item::class,
+            parentColumns = ["id"],
+            childColumns = ["itemId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        androidx.room.Index(value = ["shipId"]),
+        androidx.room.Index(value = ["itemId"])
     ]
 )
 data class ShipInventory(
     val shipId: Int, // Ship.id와 타입 일치 (Int)
-    val itemId: Long,
+    val itemId: Long, // Item.id와 타입 일치 (Long)
     val quantity: Int
 )

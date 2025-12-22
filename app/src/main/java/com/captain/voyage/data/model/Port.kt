@@ -11,5 +11,6 @@ data class Port(
     val description: String = "",
     val posX: Double,
     val posY: Double,
-    val isDiscovered: Boolean = false // 발견 여부 (선형 진행 유도용)
+    val isDiscovered: Boolean = false,
+    val canEstablishSettlement: Boolean = false // 정착지 건설 가능 지역 여부
 )

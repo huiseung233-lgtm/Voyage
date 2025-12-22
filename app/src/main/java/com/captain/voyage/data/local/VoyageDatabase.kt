@@ -5,19 +5,21 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.captain.voyage.data.model.Building // Added
+import com.captain.voyage.data.model.Settlement // Added
 import com.captain.voyage.data.model.DailyLog
 import com.captain.voyage.data.model.Goal
-import com.captain.voyage.data.model.Item // Added
-import com.captain.voyage.data.model.Market // Added
-import com.captain.voyage.data.model.Port // Added
-import com.captain.voyage.data.model.PriceHistory // Added
+import com.captain.voyage.data.model.Item
+import com.captain.voyage.data.model.Market
+import com.captain.voyage.data.model.Port
+import com.captain.voyage.data.model.PriceHistory
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.model.Ship
-import com.captain.voyage.data.model.ShipInventory // Added
+import com.captain.voyage.data.model.ShipInventory
 import com.captain.voyage.data.model.UserStatus
 
-// ★ 버전 8로 변경 (Trade 관련 테이블 추가)
+// ★ 버전 9로 변경 (Settlement 관련 테이블 추가)
 @Database(
     entities = [
         Rule::class,
@@ -30,9 +32,11 @@ import com.captain.voyage.data.model.UserStatus
         Item::class,
         Market::class,
         ShipInventory::class,
-        PriceHistory::class
+        PriceHistory::class,
+        Settlement::class,
+        Building::class
     ],
-    version = 8, // Version up
+    version = 11, // Version up (Foreign Key added)
     exportSchema = false
 )
 @TypeConverters(Converters::class) // 기존 번역가 유지
@@ -45,6 +49,7 @@ abstract class VoyageDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
     abstract fun portDao(): PortDao
     abstract fun tradeDao(): TradeDao
+    abstract fun settlementDao(): SettlementDao
 
     companion object {
         @Volatile

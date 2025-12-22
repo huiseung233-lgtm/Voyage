@@ -11,8 +11,10 @@ import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.ShipStatus
 import com.captain.voyage.data.repository.VoyageRepository
 import com.captain.voyage.ui.trade.MarketItemUi
+import com.captain.voyage.utils.GameConstants // Added
 import com.captain.voyage.utils.TimeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job // Added
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,20 +32,25 @@ class GameViewModel @Inject constructor(
     private val repository: VoyageRepository
 ) : ViewModel() {
 
+    // Market Flow Job
+    private var marketDataJob: Job? = null
+
     // 1. 실시간 데이터 관찰
     val ship = repository.ship.asLiveData()
     val userStatus = repository.userStatus.asLiveData()
     
     // 현재 항구 감지 (반경 50.0 이내)
-    // 항구에 도착했다면 해당 Port ID를 반환, 아니면 null
-    val currentPortId: StateFlow<Long?> = combine(repository.ship, repository.allPorts) { ship, ports ->
+    // 항구에 도착했다면 해당 Port 객체를 반환, 아니면 null
+    val currentPort = combine(repository.ship, repository.allPorts) { ship, ports ->
         if (ship == null) return@combine null
         ports.find { port ->
             val dx = port.posX - ship.posX
             val dy = port.posY - ship.posY
-            sqrt(dx * dx + dy * dy) <= 50.0
-        }?.id
+            sqrt(dx * dx + dy * dy) <= GameConstants.PORT_DETECTION_RADIUS
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val currentPortId = currentPort.map { it?.id }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val isAtPort = currentPortId.map { it != null }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -64,6 +71,10 @@ class GameViewModel @Inject constructor(
 
     private val _showMarketDialog = MutableStateFlow(false)
     val showMarketDialog: StateFlow<Boolean> = _showMarketDialog.asStateFlow()
+
+    // 5. [New] 정착지 (Settlement) 상태
+    private val _showSettlementDialog = MutableStateFlow(false)
+    val showSettlementDialog: StateFlow<Boolean> = _showSettlementDialog.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -86,6 +97,8 @@ class GameViewModel @Inject constructor(
                         repository.startVoyage()
                     }
                 }
+                // [Cheat] 돈 만땅 주기
+                giveMeGold()
             } catch (e: Exception) {
                 e.printStackTrace()
                 _toastMessage.postValue("데이터 로드 중 오류 발생: ${e.message}")
@@ -98,12 +111,14 @@ class GameViewModel @Inject constructor(
     fun openMarket() {
         val portId = currentPortId.value
         if (portId == null) {
-            // 항구가 아닌데 상점을 열려고 함 (식량 부족 치트용)
-            refillSupplies()
+            _toastMessage.value = "⛔ 근처에 상점이 있는 항구가 없습니다."
             return
         }
 
-        viewModelScope.launch {
+        // 기존 구독 취소 (중복 실행 방지)
+        marketDataJob?.cancel()
+        
+        marketDataJob = viewModelScope.launch {
             // 해당 항구의 마켓 데이터 구독 시작
             repository.getMarketDataFlow(portId).collect { list ->
                 val uiItems = list.map { (market, item, qty) ->
@@ -213,5 +228,33 @@ class GameViewModel @Inject constructor(
             repository.saveShip(refilledShip)
             _toastMessage.postValue("🍞 식량을 가득 채웠습니다! (치트)")
         }
+    }
+
+    fun giveMeGold() {
+        viewModelScope.launch {
+            val status = repository.userStatus.first()
+            val newStatus = if (status == null) {
+                com.captain.voyage.data.model.UserStatus(
+                    id = 1,
+                    gold = 1000000L,
+                    currentCombo = 0,
+                    lastLoginTime = System.currentTimeMillis(),
+                    penaltyType = com.captain.voyage.data.model.PenaltyType.NONE
+                )
+            } else {
+                status.copy(gold = 1000000L)
+            }
+            repository.saveUserStatus(newStatus)
+            _toastMessage.postValue("💰 1,000,000 골드를 획득했습니다! (치트)")
+        }
+    }
+
+    // --- 정착지 (Settlement) ---
+    fun openSettlement() {
+        _showSettlementDialog.value = true
+    }
+
+    fun closeSettlement() {
+        _showSettlementDialog.value = false
     }
 }

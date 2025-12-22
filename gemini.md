@@ -25,7 +25,7 @@
 1.  **규율 (Habit):** 선장이 설정한 일과를 수행하여 '추진력'을 얻습니다.
 2.  **항행 (Voyage):** 매일 아침 '점호'를 통해 어제의 성과만큼 배가 전진합니다.
 3.  **무역 (Trade):** 항구에 도착하면 특산물을 사고팔아 골드를 법니다.
-4.  **건설 (Settlement):** (예정) 무역으로 번 돈으로 정착지를 발전시킵니다.
+4.  **건설 (Settlement):** 무역으로 번 돈으로 정착지를 발전시킵니다.
 
 ---
 
@@ -65,8 +65,9 @@ com.captain.voyage
 │   ├── goals/            # 목표 및 항로 설정
 │   ├── game/             # 인게임 (항해/무역/전투 비주얼)
 │   ├── trade/            # 무역 시스템 화면
+│   ├── settlement/       # 정착지 건설 및 관리
 │   └── ...
-└── utils/                # Utility
+└── utils/                # Utility (Constants, Managers)
 ```
 
 ---
@@ -87,14 +88,18 @@ com.captain.voyage
 - [x] **Trade System:** Item, Market, Inventory 데이터 모델링 및 거래 화면 구현.
 - [x] **Economy:** 골드 및 아이템 재고 연동.
 
-#### Phase 4: Settlement (다음 단계)
+#### Phase 4: Settlement & Polish (진행 중)
+- [x] **Mainland Expansion:** 맵 남단 거대 육지(신대륙) 추가 및 정착지 건설 제한 로직.
+- [x] **Building System:** 정착지 내 본부, 창고, 조선소 등 건설 및 업그레이드 시스템.
+- [x] **Map Camera:** 배를 중심으로 한 카메라 자동 추적 및 드래그 자유 탐색 기능.
+- [x] **Map UX:** 줌 인/아웃(핀치 줌), 화면 밖 배 위치 표시 화살표, 복귀 버튼.
 - [ ] **Event System:** 항해 중 무작위 인카운터(Event) 로직 구현.
-- [ ] **Ship Upgrade:** 배 업그레이드 시스템.
-- [ ] **Building:** 정착지 건물 건설 및 업그레이드.
+- [ ] **Ship Upgrade:** 배 업그레이드 시스템 고도화.
 
 ---
 
 ## 📝 Recent Updates
-- **[Feature]** 아침 점호(Daily Briefing) 다이얼로그 및 양심 고백 기능 추가.
-- **[Feature]** 무역 시스템(Trade System) 구현: 아이템 사고 팔기 가능.
-- **[Fix]** 게임 화면 세로 모드 고정 및 UI 안정화.
+- **[Feature]** 정착지(Settlement) 시스템: 맵 남단 '신대륙 전초기지'에 영지 건설 및 건물 업그레이드 기능 추가.
+- **[Visual]** 지도 대대적 개선: 줌 인/아웃, 드래그 탐색, 배 방향 화살표 및 카메라 추적 로직 적용.
+- **[Refactor]** 데이터 무결성 강화: Room 외래키 제약 조건 추가 및 `GameConstants`를 통한 매직 넘버 정리.
+- **[Cheat]** 개발용 골드 지급 기능 추가 (HUD 클릭 시 100만 골드).

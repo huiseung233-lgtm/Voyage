@@ -78,15 +78,22 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSettlementDao(db: VoyageDatabase): com.captain.voyage.data.local.SettlementDao {
+        return db.settlementDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideVoyageRepository(
         voyageDao: VoyageDao,
         scoreRecordDao: ScoreRecordDao,
         dailyLogDao: DailyLogDao,
         goalDao: GoalDao,
         portDao: com.captain.voyage.data.local.PortDao,
-        tradeDao: com.captain.voyage.data.local.TradeDao, // Added
+        tradeDao: com.captain.voyage.data.local.TradeDao,
+        settlementDao: com.captain.voyage.data.local.SettlementDao, // Added
         appScope: CoroutineScope
     ): VoyageRepository {
-        return VoyageRepository(voyageDao, scoreRecordDao, dailyLogDao, goalDao, portDao, tradeDao, appScope)
+        return VoyageRepository(voyageDao, scoreRecordDao, dailyLogDao, goalDao, portDao, tradeDao, settlementDao, appScope)
     }
 }

@@ -29,6 +29,10 @@ enum class ItemType {
     foreignKeys = [
         ForeignKey(entity = Port::class, parentColumns = ["id"], childColumns = ["portId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(entity = Item::class, parentColumns = ["id"], childColumns = ["itemId"], onDelete = ForeignKey.CASCADE)
+    ],
+    indices = [
+        androidx.room.Index(value = ["portId"]),
+        androidx.room.Index(value = ["itemId"])
     ]
 )
 data class Market(
