@@ -6,22 +6,23 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.captain.voyage.data.model.DailyLog
+import com.captain.voyage.data.model.Goal // Added
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.UserStatus
 
-// ★ 버전 2로 변경 (ScoreRecord 추가됨)
-// entities 목록에 ScoreRecord가 추가되었고, 기존 Ship, UserStatus는 유지됩니다.
+// ★ 버전 5로 변경 (Goal 추가됨)
 @Database(
     entities = [
         Rule::class,
         Ship::class,
         UserStatus::class,
         DailyLog::class,
-        ScoreRecord::class // <-- New!
+        ScoreRecord::class,
+        Goal::class // <-- New!
     ],
-    version = 4, //
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class) // 기존 번역가 유지
@@ -33,6 +34,7 @@ abstract class VoyageDatabase : RoomDatabase() {
     // 2. 새로운 DAO 추가
     abstract fun scoreRecordDao(): ScoreRecordDao
     abstract fun dailyLogDao(): DailyLogDao
+    abstract fun goalDao(): GoalDao // <-- New!
 
     companion object {
         @Volatile

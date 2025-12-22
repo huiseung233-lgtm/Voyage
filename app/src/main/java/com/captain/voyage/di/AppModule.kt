@@ -3,6 +3,7 @@ package com.captain.voyage.di
 import android.content.Context
 import androidx.room.Room
 import com.captain.voyage.data.local.DailyLogDao
+import com.captain.voyage.data.local.GoalDao // Added
 import com.captain.voyage.data.local.ScoreRecordDao
 import com.captain.voyage.data.local.VoyageDao
 import com.captain.voyage.data.local.VoyageDatabase
@@ -50,11 +51,18 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideGoalDao(db: VoyageDatabase): GoalDao { // Added
+        return db.goalDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideVoyageRepository(
         voyageDao: VoyageDao,
         scoreRecordDao: ScoreRecordDao,
-        dailyLogDao: DailyLogDao
+        dailyLogDao: DailyLogDao,
+        goalDao: GoalDao // Added
     ): VoyageRepository {
-        return VoyageRepository(voyageDao, scoreRecordDao, dailyLogDao)
+        return VoyageRepository(voyageDao, scoreRecordDao, dailyLogDao, goalDao)
     }
 }

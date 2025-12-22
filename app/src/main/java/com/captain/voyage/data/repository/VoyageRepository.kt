@@ -1,19 +1,24 @@
 package com.captain.voyage.data.repository
 
 import com.captain.voyage.data.local.DailyLogDao
+import com.captain.voyage.data.local.GoalDao // Added
 import com.captain.voyage.data.local.ScoreRecordDao
 import com.captain.voyage.data.local.VoyageDao
 import com.captain.voyage.data.model.DailyLog
+import com.captain.voyage.data.model.Goal // Added
+import com.captain.voyage.data.model.GoalType // Added
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.UserStatus
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 class VoyageRepository(
-    private val voyageDao: VoyageDao,           // 1. 기존: 규칙, 배, 유저
-    private val scoreRecordDao: ScoreRecordDao, // 2. 신규: 개별 기록
-    private val dailyLogDao: DailyLogDao        // 3. 신규: 일별 점수판
+    private val voyageDao: VoyageDao,
+    private val scoreRecordDao: ScoreRecordDao,
+    private val dailyLogDao: DailyLogDao,
+    private val goalDao: GoalDao // Added
 ) {
 
     // ----------------------------------------------------------------
@@ -88,11 +93,39 @@ class VoyageRepository(
         return dailyLogDao.getLogDirect(date)
     }
 
-    // ... 기존 코드 하단에 추가 ...
-
     // (3) 월간 데이터 조회 (캘린더용)
     suspend fun getMonthlyLogs(yearMonth: String): List<DailyLog> {
         // "2025-12"를 받으면 "2025-12%"로 변환해서 DAO에 전달
         return dailyLogDao.getLogsByMonth("$yearMonth%")
+    }
+
+    // ----------------------------------------------------------------
+    // 4. [New] 목표(Goals) 관리 (Phase 4 기능)
+    // ----------------------------------------------------------------
+    
+    val allGoals: Flow<List<Goal>> = goalDao.getAllGoals()
+
+    suspend fun saveGoal(goal: Goal) {
+        goalDao.insertGoal(goal)
+    }
+
+    suspend fun deleteGoal(goal: Goal) {
+        goalDao.deleteGoal(goal)
+    }
+
+    // 목표 진행률(현재 점수) 조회
+    fun getGoalProgress(goal: Goal): Flow<Int?> {
+        return if (goal.type == GoalType.CUSTOM) {
+            // 커스텀 목표: 특정 룰들만 합산
+            if (goal.linkedRuleIds.isEmpty()) {
+                // 룰 선택 안 했으면 그냥 0 리턴 (혹은 전체 합산? 기획에 따름. 일단 0)
+                flowOf(0)
+            } else {
+                goalDao.getCustomScoreSum(goal.startDate, goal.endDate, goal.linkedRuleIds)
+            }
+        } else {
+            // 주간/월간 목표: 해당 기간 전체 합산
+            goalDao.getScoreSumByPeriod(goal.startDate, goal.endDate)
+        }
     }
 }

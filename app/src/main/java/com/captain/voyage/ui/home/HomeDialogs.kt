@@ -324,7 +324,8 @@ fun LogbookDialog(
                         LogRuleItem(rule) { isSuccess ->
                             val score = if (isSuccess) rule.defaultScore else rule.penalty
                             val suffix = if (isSuccess) "" else " (실패)"
-                            viewModel.addRecord(date, rule.title + suffix, score)
+                            // [수정] rule.id 전달
+                            viewModel.addRecord(date, rule.title + suffix, score, ruleId = rule.id)
                         }
                     }
                 }

@@ -7,12 +7,16 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.model.DailyLog
+import com.captain.voyage.data.model.GoalType
 import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.repository.VoyageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted // Added
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map // Added
+import kotlinx.coroutines.flow.stateIn // Added
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -35,9 +39,12 @@ class HomeViewModel @Inject constructor(
     private val _displayDate = MutableStateFlow("")
     val displayDate: StateFlow<String> = _displayDate.asStateFlow()
 
-    // 목표 점수 (임시: 나중에 GoalsRepository에서 가져오도록 수정 필요)
-    private val _targetScore = MutableStateFlow(100)
-    val targetScore: StateFlow<Int> = _targetScore.asStateFlow()
+    // 목표 점수 (GoalType.DAILY 목표의 targetScore를 실시간으로 관찰)
+    val targetScore: StateFlow<Int> = repository.allGoals
+        .map { goals ->
+            goals.find { it.type == GoalType.DAILY }?.targetScore ?: 100 // 없으면 기본 100
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100)
 
     // ★ [New] 알림 클릭 시 로그북 팝업을 띄우기 위한 이벤트 신호
     private val _navigateToLogbook = MutableLiveData<Boolean>()
@@ -73,16 +80,17 @@ class HomeViewModel @Inject constructor(
     val allRules = repository.allRules.asLiveData()
 
     // 3. 기록 추가/삭제 기능
-    fun addRecord(targetDate: String, content: String, score: Int) {
+    // [수정] ruleId 파라미터 추가 (기본값 null)
+    fun addRecord(targetDate: String, content: String, score: Int, ruleId: Long? = null) {
         viewModelScope.launch {
             val newRecord = ScoreRecord(
                 date = targetDate,
                 timestamp = System.currentTimeMillis(),
-                ruleId = null,
+                ruleId = ruleId, // 여기서 저장해야 커스텀 목표에서 집계됨
                 ruleTitle = content,
                 score = score,
                 note = "",
-                isCustom = true
+                isCustom = ruleId == null // ruleId가 없으면 완전 커스텀 입력
             )
             repository.insertScoreRecord(newRecord)
             updateTotalScore(targetDate, score)
