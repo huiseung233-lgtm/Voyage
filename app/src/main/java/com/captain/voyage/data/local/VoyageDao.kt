@@ -32,7 +32,7 @@ interface VoyageDao {
 
     // --- 3. 선박(Ship) & 유저(UserStatus) 관리 ---
     // 배와 유저 정보는 단 하나만(ID=1) 존재한다고 가정합니다.
-    @Query("SELECT * FROM ship WHERE id = 1")
+    @Query("SELECT * FROM ships WHERE id = 1")
     fun getShip(): Flow<Ship?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

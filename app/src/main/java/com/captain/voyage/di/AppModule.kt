@@ -13,11 +13,20 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideApplicationScope(): CoroutineScope {
+        return CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    }
 
     @Provides
     @Singleton
@@ -57,12 +66,20 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun providePortDao(db: VoyageDatabase): com.captain.voyage.data.local.PortDao {
+        return db.portDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideVoyageRepository(
         voyageDao: VoyageDao,
         scoreRecordDao: ScoreRecordDao,
         dailyLogDao: DailyLogDao,
-        goalDao: GoalDao // Added
+        goalDao: GoalDao,
+        portDao: com.captain.voyage.data.local.PortDao,
+        appScope: CoroutineScope // Added
     ): VoyageRepository {
-        return VoyageRepository(voyageDao, scoreRecordDao, dailyLogDao, goalDao)
+        return VoyageRepository(voyageDao, scoreRecordDao, dailyLogDao, goalDao, portDao, appScope)
     }
 }

@@ -22,7 +22,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -92,7 +92,7 @@ fun SettingsScreen(
                         }
                     }
                 )
-                Divider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
 
                 // Wake Time
                 TimeSettingRow(
@@ -105,7 +105,7 @@ fun SettingsScreen(
                         }
                     }
                 )
-                Divider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
 
                 // Morning Buffer
                 NumberInputRow(

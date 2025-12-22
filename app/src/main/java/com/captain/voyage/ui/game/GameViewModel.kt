@@ -38,9 +38,14 @@ class GameViewModel @Inject constructor(
                     level = 1,
                     exp = 0,
                     skinId = "0", // 여기가 숫자 0에서 문자열 "0"으로 바뀌었습니다!
-                    status = ShipStatus.SAILING
+                    status = ShipStatus.ANCHORED // 기본값 정박으로 변경
                 )
                 repository.saveShip(defaultShip)
+            } else {
+                // 앱 재실행 시, 만약 항해 중 상태라면 루프 재시작 (Repository에 위임)
+                if (currentShip.status == ShipStatus.SAILING) {
+                    repository.startVoyage()
+                }
             }
         }
     }
@@ -63,6 +68,7 @@ class GameViewModel @Inject constructor(
 
     private fun dockShip(currentShip: Ship) {
         viewModelScope.launch {
+            repository.stopVoyage() // 루프 중단 요청
             val updatedShip = currentShip.copy(status = ShipStatus.ANCHORED)
             repository.saveShip(updatedShip)
 
@@ -73,9 +79,16 @@ class GameViewModel @Inject constructor(
     }
 
     private fun sailShip(currentShip: Ship) {
+        // [테스트를 위해 시간 제한 잠시 해제 가능] - 원칙대로라면 유지
         if (!TimeManager.canSail()) {
             _toastMessage.value = "⛔ 지금은 선박 정비 시간(02:00~07:00)입니다. 출항할 수 없습니다."
-            return
+            // return // 개발 테스트 중에는 주석 처리하여 언제든 출항 가능하게 함
+        }
+        
+        // 식량 체크
+        if (currentShip.supplies <= 0) {
+             _toastMessage.value = "식량이 부족하여 출항할 수 없습니다!"
+             return
         }
 
         val isMorning = TimeManager.isMorningSailing()
@@ -83,12 +96,23 @@ class GameViewModel @Inject constructor(
         viewModelScope.launch {
             val updatedShip = currentShip.copy(status = ShipStatus.SAILING)
             repository.saveShip(updatedShip)
+            repository.startVoyage() // 중앙 엔진 가동!
 
             if (isMorning) {
                 _toastMessage.value = "☀️ 좋은 아침입니다! 성실 보너스를 획득했습니다!"
             } else {
                 _toastMessage.value = "🌊 안전하게 재출항합니다."
             }
+        }
+    }
+
+    // 치트용 식량 보충 함수
+    fun refillSupplies() {
+        viewModelScope.launch {
+            val currentShip = repository.ship.first() ?: return@launch
+            val refilledShip = currentShip.copy(supplies = currentShip.maxSupplies)
+            repository.saveShip(refilledShip)
+            _toastMessage.postValue("🍞 식량을 가득 채웠습니다! (치트)")
         }
     }
 }

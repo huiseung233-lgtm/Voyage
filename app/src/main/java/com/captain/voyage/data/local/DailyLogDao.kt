@@ -32,5 +32,5 @@ interface DailyLogDao {
     // 6. ★ [New] 특정 월(Month)의 모든 로그 가져오기
     // 사용법: getLogsByMonth("2025-12%") -> 12월 데이터 전부 조회
     @Query("SELECT * FROM daily_logs WHERE date LIKE :monthPattern")
-    suspend fun getLogsByMonth(monthPattern: String): List<DailyLog>
+    fun getLogsByMonth(monthPattern: String): Flow<List<DailyLog>> // Changed to Flow
 }

@@ -24,9 +24,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
@@ -34,7 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults // Added
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -44,6 +44,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog // Added
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState // Added
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -75,7 +76,7 @@ fun CalendarDialog(
     onDateSelected: (String) -> Unit
 ) {
     var currentYearMonth by remember { mutableStateOf(YearMonth.now()) }
-    val monthlyLogs by viewModel.monthlyLogs.observeAsState(emptyList())
+    val monthlyLogs by viewModel.monthlyLogs.collectAsState()
 
     LaunchedEffect(currentYearMonth) {
         val ymStr = currentYearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))
@@ -98,7 +99,7 @@ fun CalendarDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { currentYearMonth = currentYearMonth.minusMonths(1) }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Prev")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev")
                     }
                     Text(
                         text = "${currentYearMonth.year}년 ${currentYearMonth.monthValue}월",
@@ -107,7 +108,7 @@ fun CalendarDialog(
                         color = Color(0xFF3E2723)
                     )
                     IconButton(onClick = { currentYearMonth = currentYearMonth.plusMonths(1) }) {
-                        Icon(Icons.Default.ArrowForward, contentDescription = "Next")
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
                     }
                 }
 
@@ -268,7 +269,7 @@ fun LogbookDialog(
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
-                Divider(color = Color(0xFF8D6E63))
+                HorizontalDivider(color = Color(0xFF8D6E63))
 
                 // History List (Top Half)
                 Text("기록 내역", modifier = Modifier.padding(top = 8.dp), fontSize = 12.sp, color = Color.Gray)
@@ -284,7 +285,7 @@ fun LogbookDialog(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Divider(color = Color(0xFF8D6E63))
+                HorizontalDivider(color = Color(0xFF8D6E63))
 
                 // Rules List (Bottom Half)
                 Row(

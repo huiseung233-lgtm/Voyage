@@ -8,13 +8,21 @@ enum class ShipStatus {
     ANCHORED,   // 정박 중 (휴식)
     DOOMED      // 난파/패널티 상태
 }
-@Entity(tableName = "ship") // <--- ★ 여기 추가!
+@Entity(tableName = "ships")
 data class Ship(
-    @PrimaryKey // <--- ★ 여기 추가!
-    val id: Int = 1,                 // 배는 보통 1개만 관리하므로 ID는 1로 고정
-    val name: String,                // 배 이름 (예: 황금 호)
-    val level: Int = 1,              // 배 레벨
-    val exp: Long = 0,               // 현재 경험치
-    val skinId: String = "default_wood", // 스킨 리소스 이름 (Semantic Naming)
-    val status: ShipStatus = ShipStatus.ANCHORED // 기본 상태
+    @PrimaryKey
+    val id: Int = 1,
+    val name: String,
+    val level: Int = 1,
+    val exp: Int = 0,
+    val skinId: String = "0",
+    val status: ShipStatus = ShipStatus.ANCHORED,
+
+    // --- 항해 데이터 ---
+    val posX: Double = 0.0,      // 현재 X 좌표
+    val posY: Double = 0.0,      // 현재 Y 좌표
+    val destX: Double? = null,   // 목적지 X 좌표 (null이면 정박 중)
+    val destY: Double? = null,   // 목적지 Y 좌표
+    val supplies: Int = 100,     // 현재 식량/물 (0~100)
+    val maxSupplies: Int = 100   // 최대 적재량
 )

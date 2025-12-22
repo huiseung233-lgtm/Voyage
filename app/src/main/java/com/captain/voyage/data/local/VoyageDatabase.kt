@@ -6,13 +6,18 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.captain.voyage.data.model.DailyLog
-import com.captain.voyage.data.model.Goal // Added
+import com.captain.voyage.data.model.Goal
+import com.captain.voyage.data.model.Item // Added
+import com.captain.voyage.data.model.Market // Added
+import com.captain.voyage.data.model.Port // Added
+import com.captain.voyage.data.model.PriceHistory // Added
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.model.Ship
+import com.captain.voyage.data.model.ShipInventory // Added
 import com.captain.voyage.data.model.UserStatus
 
-// ★ 버전 5로 변경 (Goal 추가됨)
+// ★ 버전 7로 변경
 @Database(
     entities = [
         Rule::class,
@@ -20,21 +25,28 @@ import com.captain.voyage.data.model.UserStatus
         UserStatus::class,
         DailyLog::class,
         ScoreRecord::class,
-        Goal::class // <-- New!
+        Goal::class,
+        Port::class,
+        Item::class,
+        Market::class,
+        ShipInventory::class,
+        PriceHistory::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class) // 기존 번역가 유지
 abstract class VoyageDatabase : RoomDatabase() {
 
-    // 1. 기존 DAO 유지
+    // 1. 기존 DAO
     abstract fun voyageDao(): VoyageDao
-
-    // 2. 새로운 DAO 추가
     abstract fun scoreRecordDao(): ScoreRecordDao
     abstract fun dailyLogDao(): DailyLogDao
-    abstract fun goalDao(): GoalDao // <-- New!
+    abstract fun goalDao(): GoalDao
+    abstract fun portDao(): PortDao
+
+    // 2. 신규 DAO 추가 예정 (무역/항해)
+    // abstract fun tradeDao(): TradeDao
 
     companion object {
         @Volatile

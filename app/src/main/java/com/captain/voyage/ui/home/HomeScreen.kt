@@ -60,7 +60,8 @@ fun HomeScreen(
     val context = LocalContext.current
     val todayLog by viewModel.todayLog.observeAsState()
     val targetScore by viewModel.targetScore.collectAsStateWithLifecycle()
-    val monthlyLogs by viewModel.monthlyLogs.observeAsState(emptyList())
+    // [수정] StateFlow이므로 collectAsState 사용
+    val monthlyLogs by viewModel.monthlyLogs.collectAsStateWithLifecycle()
     
     // Calendar State
     var currentYearMonth by remember { mutableStateOf(YearMonth.now()) }

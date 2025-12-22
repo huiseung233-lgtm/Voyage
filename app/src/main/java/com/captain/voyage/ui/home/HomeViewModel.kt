@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted // Added
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map // Added
 import kotlinx.coroutines.flow.stateIn // Added
 import kotlinx.coroutines.launch
@@ -114,20 +115,18 @@ class HomeViewModel @Inject constructor(
         repository.updateDailyLog(updatedLog)
     }
 
-    // 4. 캘린더용 월간 데이터 로직
-    private val _currentMonth = MutableLiveData<String>(
+    // 4. 캘린더용 월간 데이터 로직 (실시간 Flow)
+    private val _currentMonth = MutableStateFlow(
         SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
     )
-    val currentMonth: LiveData<String> get() = _currentMonth
 
-    private val _monthlyLogs = MutableLiveData<List<DailyLog>>()
-    val monthlyLogs: LiveData<List<DailyLog>> get() = _monthlyLogs
+    val monthlyLogs: StateFlow<List<DailyLog>> = _currentMonth
+        .flatMapLatest { yearMonth ->
+            repository.getMonthlyLogs(yearMonth)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun loadMonthlyLogs(yearMonth: String) {
         _currentMonth.value = yearMonth
-        viewModelScope.launch {
-            val logs = repository.getMonthlyLogs(yearMonth)
-            _monthlyLogs.value = logs
-        }
     }
 }

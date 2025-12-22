@@ -141,7 +141,7 @@ fun GameScreen(
                         .size(120.dp)
                         .background(Color(0x80FFEB3B), RoundedCornerShape(8.dp))
                         .clickable {
-                            Toast.makeText(context, "🏪 상점 주인: '아직 오픈 준비 중일세!'", Toast.LENGTH_SHORT).show()
+                            viewModel.refillSupplies()
                         },
                     contentAlignment = Alignment.Center
                 ) {

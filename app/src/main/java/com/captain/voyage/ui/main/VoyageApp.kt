@@ -4,8 +4,8 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -33,7 +33,7 @@ import com.captain.voyage.ui.settings.SettingsViewModel
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Home : Screen("home", "선장실", Icons.Default.Home)
-    object Rules : Screen("rules", "규율", Icons.Default.List)
+    object Rules : Screen("rules", "규율", Icons.AutoMirrored.Filled.List)
     object Goals : Screen("goals", "항로", Icons.Default.Star)
     object Settings : Screen("settings", "조타실", Icons.Default.Settings)
 }

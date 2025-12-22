@@ -31,6 +31,20 @@ class GoalsViewModel @Inject constructor(
     private val repository: VoyageRepository
 ) : ViewModel() {
 
+    init {
+        viewModelScope.launch {
+            repository.initializeDummyPorts()
+        }
+    }
+
+    // 모든 항구 리스트
+    val allPorts: StateFlow<List<com.captain.voyage.data.model.Port>> = repository.allPorts
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 선박 정보 (위치 포함)
+    val ship: StateFlow<com.captain.voyage.data.model.Ship?> = repository.ship
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     // 모든 룰 (커스텀 목표 설정 시 선택용)
     val allRules: StateFlow<List<Rule>> = repository.allRules
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -53,6 +67,13 @@ class GoalsViewModel @Inject constructor(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // --- 지도 상호작용 ---
+    fun setDestination(x: Float, y: Float) {
+        viewModelScope.launch {
+            repository.setDestination(x, y)
+        }
+    }
 
     // --- 목표 생성/수정 ---
 

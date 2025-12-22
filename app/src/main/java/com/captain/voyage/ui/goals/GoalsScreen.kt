@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape // Added
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -62,6 +63,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.captain.voyage.data.model.Goal
 import com.captain.voyage.data.model.GoalType
 import com.captain.voyage.data.model.Rule
+import com.captain.voyage.data.model.Port
+import com.captain.voyage.data.model.Ship
+import com.captain.voyage.ui.game.WorldMapView
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -195,7 +199,15 @@ fun GoalsScreen(
     // --- Dialogs ---
 
     if (showBigMap) {
-        BigMapDialog(onDismiss = { showBigMap = false })
+        val ports by viewModel.allPorts.collectAsState()
+        val ship by viewModel.ship.collectAsState()
+        
+        BigMapDialog(
+            ports = ports,
+            ship = ship,
+            onDismiss = { showBigMap = false },
+            onMapClick = { x, y -> viewModel.setDestination(x, y) }
+        )
     }
 
     if (showSimpleDialog) {
@@ -301,7 +313,12 @@ fun GoalItemCard(
 }
 
 @Composable
-fun BigMapDialog(onDismiss: () -> Unit) {
+fun BigMapDialog(
+    ports: List<Port>,
+    ship: Ship?,
+    onDismiss: () -> Unit,
+    onMapClick: (Float, Float) -> Unit // Added
+) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -310,15 +327,22 @@ fun BigMapDialog(onDismiss: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .clickable { onDismiss() }, // 클릭하면 닫힘
-            contentAlignment = Alignment.Center
         ) {
-            Text("🗺️ Big Map View", color = Color.White, fontSize = 30.sp)
+            // 실제 지도 렌더링
+            WorldMapView(
+                modifier = Modifier.fillMaxSize(),
+                ports = ports,
+                ship = ship,
+                onMapClick = onMapClick // 전달
+            )
+
+            // 닫기 버튼
             IconButton(
                 onClick = onDismiss,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
+                    .background(Color(0x80000000), CircleShape)
             ) {
                 Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
             }
