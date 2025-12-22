@@ -8,103 +8,82 @@
 
 **"당신의 오늘이 대륙을 만든다. 습관이 동력이 되는 항해 시뮬레이션"**
 
-**신대륙 개척기**는 **'자기관리(Habit Tracker)'**와 **'항해 시뮬레이션(Voyage Sim)'**을 결합한 혁신적인 동기부여 게임입니다. 사용자의 실제 성취가 게임 내 물리적 거리와 경제적 이득으로 치환되어, 지속적인 동기부여를 제공합니다.
+**신대륙 개척기**는 **'자기관리(Habit Tracker)'**와 **'대항해시대풍 무역 시뮬레이션(Trade Sim)'**을 결합한 혁신적인 동기부여 게임입니다. 사용자의 실제 성취가 배의 추진력이 되고, 전략적인 항해와 무역을 통해 정착지를 발전시켜야 합니다.
 
 ---
 
 ## 🔄 Core Gameplay Loop
 
-1.  **규율 (Habit):** 선장(사용자)이 설정한 규칙을 수행하고 기록합니다.
-2.  **목표 (Goal):** 일일/주간/월간 목표 및 커스텀 목표를 달성하여 보상을 극대화합니다.
-3.  **항행 (Sailing):** 달성도에 따라 배가 전진하며(탭 투 세일) 새로운 지역을 탐험합니다.
-4.  **건설 (Build):** *(Planned)* 확보한 자원으로 정착지를 발전시킵니다.
+1.  **규율 (Habit):** 선장이 설정한 일과를 수행하여 '추진력'을 얻습니다.
+2.  **항행 (Voyage):** 목표 달성도에 따라 배가 전진하며, 항해 중 다양한 이벤트(폭풍, 해적 등)를 마주합니다.
+3.  **무역 (Trade):** 항구마다 다른 특산물 시세를 이용하여 부를 축적합니다.
+4.  **건설 (Settlement):** 무역으로 번 돈으로 신대륙의 정착지를 발전시키고 함대를 업그레이드합니다.
+
+---
+
+## 🎮 Detailed Mechanics
+
+### 🚀 A. 추진력 시스템 (Propulsion Logic)
+사용자의 일일 목표(Daily Goal) 달성 여부가 항해 속도를 결정합니다.
+- **정상 순항 (Full Sail):** 일일 목표 달성 시. 예정된 거리를 이동하며 보급품을 효율적으로 소모합니다.
+- **저속 항행 (Drift):** 목표 미달 시. 이동 거리가 대폭 감소하거나 제자리에 머물며, 식량과 물만 낭비하게 됩니다.
+
+### 💰 B. 경제 및 무역 시스템 (Economy & Trade)
+단순한 골드 보상이 아닌, 전략적인 상거래가 핵심입니다.
+- **항구 (Port):** 각 섬/대륙은 고유한 특산물과 수요/공급 물품이 존재합니다.
+- **시세 차익:** A항구에서 쌀 때 사서 B항구에 비싸게 파는 전략이 필요합니다.
+- **보급 (Supply):** 항해 거리에 비례하여 식량, 물, 자재 등의 소모품을 미리 구매하고 적재해야 합니다.
+
+### 🌊 C. 리스크 관리 (Risk Management)
+- **항해 준비:** 얼마나 먼 섬을 목표로 할 것인가? (Risk vs Return)
+- **이벤트:** 항해 도중 폭풍우(내구도 감소), 괴혈병(선원 감소), 해적(전투 혹은 협상) 등의 이벤트가 발생하며, 이를 대비한 아이템(대포, 라임 등)이 필요합니다.
 
 ---
 
 ## 🏗️ Architecture & Tech Stack
 
-본 프로젝트는 **Modern Android Architecture**를 준수합니다.
-
-| Layer | Technology |
-|---|---|
-| **UI** | **Jetpack Compose** (Material3), Single Activity |
-| **Navigation** | **Navigation Compose** (No Fragments) |
-| **DI** | **Dagger-Hilt** (Dependency Injection) |
-| **Data** | **Room Database**, Repository Pattern |
-| **Async** | **Coroutines** & **Flow** |
+**Modern Android Architecture** (Single Activity, Compose, Hilt, MVVM)
 
 ### 📂 Project Structure
 ```
 com.captain.voyage
-├── data/                 # Data Layer
-│   ├── local/            # Room Database, DAO, TypeConverters
-│   ├── model/            # Entities (Goal, Rule, Ship, etc.)
-│   └── repository/       # Single Source of Truth
-├── di/                   # Hilt Modules (AppModule)
-├── ui/                   # Presentation Layer (Compose)
-│   ├── home/             # 홈 화면 (항해 일지, 캘린더, 게이지)
-│   ├── goals/            # 목표 관리 (주간/월간/커스텀 목표)
-│   ├── rules/            # 규칙 관리 (CRUD)
-│   ├── game/             # 게임 화면 (항해 비주얼)
-│   ├── settings/         # 설정 (시간, 알림)
-│   ├── main/             # MainActivity & Navigation Host
-│   └── theme/            # Compose Theme
-└── utils/                # Utility Classes
+├── data/                 # Data Layer (Room, Repository)
+├── di/                   # Dependency Injection (Hilt)
+├── ui/                   # UI Layer (Compose)
+│   ├── home/             # 항해 일지 (Main Dashboard)
+│   ├── goals/            # 목표 및 항로 설정
+│   ├── rules/            # 규칙 관리
+│   ├── game/             # 인게임 (항해/무역/전투 비주얼)
+│   ├── trade/            # (Planned) 무역소 화면
+│   └── settlement/       # (Planned) 정착지 건설 화면
+└── utils/                # Utility
 ```
 
 ---
 
-## 🛠️ Features Implementation Status
+## 🚧 Development Roadmap
 
-### ✅ Completed
-- **Architecture Overhaul:** View System(Fragment) → **Pure Compose + Hilt** 완벽 전환.
-- **Home Tab (Captain's Log):**
-    - 항해 일지 컨셉의 UI (양피지 스타일).
-    - 일일 목표 달성률 게이지 바 (실시간 연동).
-    - 월간 캘린더 그리드 (점수 표시, 오늘 날짜 강조).
-    - 미래 날짜 기록 방지 로직.
-- **Goals Tab (Navigation):**
-    - **Daily Goal:** 일일 목표 점수 설정 및 홈 화면 연동.
-    - **Custom Goal:** 기간(Start/End) 및 특정 룰(Rules) 연동 목표 생성.
-    - **Stats:** 주간/월간 목표 자동 집계 시스템.
-- **Rules Tab:** 규칙 생성, 수정, 삭제, 순서 변경.
-- **Game Tab:** 항해 상태(정박/출항) 토글 및 애니메이션 배경(기초).
+#### Phase 1: Foundation & Habit (완료)
+- [x] Hilt & Navigation Compose 아키텍처 구축.
+- [x] 항해 일지(Home) 및 목표 관리(Goals) 시스템 구현.
+- [x] 커스텀 목표 및 데이터 일치성 로직 확보.
 
-### 🚧 Roadmap (Future Development)
+#### Phase 2: Visualization & Map (진행 중)
+- [ ] **Interactive Map:** 세계 지도 위 내 배의 위치와 항로 표시.
+- [ ] **Sailing Visuals:** 목표 달성 시 배가 전진하는 연출 강화.
 
-#### Phase 1: Exploration & Visuals (탐험과 시각화)
-- [ ] **Interactive Map:** `BigMapDialog`에 실제 지도 이미지 적용 및 선박 위치 표시.
-- [ ] **Sailing Animation:** 홈 화면 상단 및 게임 화면에 파도/선박 애니메이션 효과(Lottie) 추가.
-- [ ] **Event System:** 항해 중 무작위 이벤트 발생 (폭풍우, 보물 상자 등).
+#### Phase 3: Voyage & Trade (핵심 재미 구현)
+- [ ] **Voyage Engine:** 일일 정산 시 이동 거리 계산 및 보급품 차감 로직.
+- [ ] **Trade System:** 항구 데이터(Port), 교역품(TradeItem) 모델링 및 거래 화면 구현.
+- [ ] **Event System:** 항해 중 무작위 인카운터(Event) 로직 구현.
 
-#### Phase 2: Economy & Construction (경제와 건설)
-- [ ] **Economy System:** 목표 달성 시 '골드' 지급 로직 고도화.
-- [ ] **Shop & Build:** 골드를 소비하여 배를 업그레이드하거나 정착지 건물을 짓는 기능.
-- [ ] **Inventory:** 획득한 아이템(특산물) 관리.
-
-#### Phase 3: Data & Social (분석과 소셜)
-- [ ] **Statistics Dashboard:** 주간/월간 성취도 그래프 시각화.
-- [ ] **Backup & Restore:** Google Drive 연동 데이터 백업.
+#### Phase 4: Settlement (최종 콘텐츠)
+- [ ] **Building:** 정착지 건물 건설 및 업그레이드.
+- [ ] **Endless Mode:** 더 먼 바다로의 탐험.
 
 ---
 
-## 📝 Recent Updates (Changelog)
-
-### [2025-12-22] Major Feature Update & Refactoring
-- **Refactoring:**
-    - `Hilt` 도입으로 의존성 주입 구조 개선.
-    - `Navigation Compose` 적용 및 `Fragment` 전량 삭제.
-- **UI/UX Enhancement:**
-    - **Home:** 상단 'Tap to Sail' 배너와 하단 캘린더 카드(점수/오늘 표시)로 레이아웃 개편.
-    - **Goals:** 커스텀 목표(제목, 기간, 룰 선택) 기능 완벽 구현.
-- **Data Integrity:**
-    - `Goal` 테이블 추가 및 `ScoreRecord`에 `ruleId` 연동 저장 로직 수정.
-    - 커스텀 목표 점수 집계 시 데이터 불일치 방지 로직(실시간 쿼리) 적용.
-
----
-
-## 🤝 Contribution
-1. Fork & Clone
-2. Create Feature Branch
-3. Commit & Push
-4. Pull Request
+## 📝 Recent Updates
+- **[Refactor]** Fragment 제거 및 Pure Compose 아키텍처로 전환.
+- **[Feature]** 항해 일지 컨셉의 홈 화면 및 커스텀 목표 기능 추가.
+- **[Plan]** 대항해시대 스타일의 무역/항해 시스템으로 기획 전면 개편.
