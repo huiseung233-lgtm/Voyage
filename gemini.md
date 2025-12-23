@@ -49,52 +49,39 @@
 
 ---
 
+## 🤖 AI Interaction Rules (상호작용 원칙)
+
+> **[최우선 지침]**
+> - **코드 수정 및 작성 제한:** 사용자가 프롬프트에 **'작성해줘'**라는 트리거 명령어를 포함하기 전까지는 절대 코드를 작성하거나 수정하지 않습니다. 그전까지는 분석, 기획, 제안에만 집중합니다.
+> - **언어 설정:** 모든 응답은 반드시 **한국어**로 진행합니다.
+> - **투두 리스트 관리:** 새로운 세션이 시작되거나 한 단계의 작업이 완료될 때마다, 아래의 'Development Roadmap'을 참고하여 현재 진행 상황과 다음 단계를 안내합니다.
+
+---
+
 ## 🏗️ Architecture & Tech Stack
-
-**Modern Android Architecture** (Single Activity, Compose, Hilt, MVVM)
-
-### 📂 Project Structure
-```
-com.captain.voyage
-├── data/                 # Data Layer (Room, Repository)
-│   ├── model/            # Entity (Ship, Port, Item, Market...)
-│   └── local/            # DAO
-├── di/                   # Dependency Injection (Hilt)
-├── ui/                   # UI Layer (Compose)
-│   ├── home/             # 항해 일지 (Main Dashboard)
-│   ├── goals/            # 목표 및 항로 설정
-│   ├── game/             # 인게임 (항해/무역/전투 비주얼)
-│   ├── trade/            # 무역 시스템 화면
-│   ├── settlement/       # 정착지 건설 및 관리
-│   └── ...
-└── utils/                # Utility (Constants, Managers)
-```
+... (중략) ...
 
 ---
 
 ## 🚧 Development Roadmap
 
-#### Phase 1: Foundation & Habit (완료)
-- [x] Hilt & Navigation Compose 아키텍처 구축.
-- [x] 항해 일지(Home) 및 목표 관리(Goals) 시스템 구현.
+#### Phase 1~3: 기초 및 핵심 시스템 구축 (완료)
+- [x] Hilt & Navigation, 지도 Canvas, 항해 엔진, 기초 무역 시스템 구현 완료.
 
-#### Phase 2: Visualization & Map (완료)
-- [x] **Interactive Map:** Canvas 기반의 월드 맵 구현.
-- [x] **Navigation:** 지도 터치 시 목적지 설정 및 자석(Snapping) 기능 구현.
-- [x] **Sailing Engine:** 일일 목표 달성 여부에 따른 이동 거리 계산 및 벡터 이동 로직 구현.
+#### Phase 4: 시스템 확장 및 폴리싱 (진행 중)
+1.  **[ ] 식량(Supplies) 구매 시스템:** 상점에서 아이템 구매 시 선박 보급 연동.
+2.  **[ ] Goals 탭 월드맵 미리보기:** 목표 화면 상단 배너에 실시간 맵 일부 표시.
+3.  **[ ] ComfyUI 설치:** 로컬 에셋 제작 환경 구축 (Stable Diffusion).
+4.  **[ ] GameActivity UI 정리:** 레이아웃 최적화 및 HUD/에셋 규격 정리.
+5.  **[ ] 시세 변동 알고리즘:** 매일 가격이 변하는 동적 경제 시스템.
+6.  **[ ] 정착지 개발 알고리즘:** 인구, 세금, 자원 생산 로직 추가.
+7.  **[ ] 시나리오 및 다이얼로그:** 초기 시작 스토리 및 등장인물 대사 시스템.
+8.  **[ ] 메인 배너 애니메이션:** Lottie 또는 Compose 애니메이션 연출.
 
-#### Phase 3: Voyage & Trade (완료)
-- [x] **Daily Briefing:** 아침 점호(정산) 및 양심 점검 팝업 구현.
-- [x] **Trade System:** Item, Market, Inventory 데이터 모델링 및 거래 화면 구현.
-- [x] **Economy:** 골드 및 아이템 재고 연동.
+#### Phase 5: 마무리 및 출시 준비
+- [ ] 사운드 효과 및 배경음악 추가.
+- [ ] 전체 밸런싱 및 최종 버그 수정.
 
-#### Phase 4: Settlement & Polish (진행 중)
-- [x] **Mainland Expansion:** 맵 남단 거대 육지(신대륙) 추가 및 정착지 건설 제한 로직.
-- [x] **Building System:** 정착지 내 본부, 창고, 조선소 등 건설 및 업그레이드 시스템.
-- [x] **Map Camera:** 배를 중심으로 한 카메라 자동 추적 및 드래그 자유 탐색 기능.
-- [x] **Map UX:** 줌 인/아웃(핀치 줌), 화면 밖 배 위치 표시 화살표, 복귀 버튼.
-- [ ] **Event System:** 항해 중 무작위 인카운터(Event) 로직 구현.
-- [ ] **Ship Upgrade:** 배 업그레이드 시스템 고도화.
 
 ---
 
