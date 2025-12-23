@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.captain.voyage.data.model.Item
+import com.captain.voyage.data.model.ItemType // Added
 import com.captain.voyage.data.model.Market
 import com.captain.voyage.data.model.ShipInventory
 
@@ -99,6 +100,10 @@ fun TradeItemRow(
                     color = Color.Gray
                 )
                 Text(text = "보유: ${itemUi.myQuantity}개", fontSize = 12.sp, color = Color(0xFF1B5E20))
+                // [New] 식량 효과 표시
+                if (itemUi.item.type == ItemType.FOOD) {
+                     Text(text = "🍞 효과: 식량 +${itemUi.item.effectValue}", fontSize = 10.sp, color = Color(0xFFEF6C00))
+                }
             }
 
             // Actions

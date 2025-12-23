@@ -87,7 +87,10 @@ class VoyageRepository(
     val userStatus: Flow<UserStatus?> = voyageDao.getUserStatus()
 
     suspend fun saveShip(ship: Ship) {
+        // [Fixed] REPLACE를 쓰면 외래 키(Cascade) 때문에 인벤토리가 수장됨.
+        // 먼저 INSERT(IGNORE) 시도 후, 실패하면 UPDATE 수행.
         voyageDao.insertShip(ship)
+        voyageDao.updateShip(ship)
     }
 
     suspend fun saveUserStatus(status: UserStatus) {
@@ -188,10 +191,11 @@ class VoyageRepository(
         val items = tradeDao.getAllItems().first()
         if (items.isEmpty()) {
             val newItems = listOf(
-                Item(id = 1, name = "쌀", basePrice = 10, description = "주식. 어디서나 잘 팔린다."),
-                Item(id = 2, name = "목재", basePrice = 20, description = "건축 자재. 희망의 섬 특산물."),
-                Item(id = 3, name = "향신료", basePrice = 100, description = "귀한 향신료. 거친 파도 항구 특산물."),
-                Item(id = 4, name = "철광석", basePrice = 50, description = "단단한 금속. 신대륙에서 발견된다.")
+                // [New] 쌀은 식량(FOOD), 효과값 30
+                Item(id = 1, name = "쌀", basePrice = 10, description = "주식. 식량으로 전환 가능하다.", type = ItemType.FOOD, effectValue = 30),
+                Item(id = 2, name = "목재", basePrice = 20, description = "건축 자재. 희망의 섬 특산물.", type = ItemType.TRADE_GOOD),
+                Item(id = 3, name = "향신료", basePrice = 100, description = "귀한 향신료. 거친 파도 항구 특산물.", type = ItemType.TRADE_GOOD),
+                Item(id = 4, name = "철광석", basePrice = 50, description = "단단한 금속. 신대륙에서 발견된다.", type = ItemType.TRADE_GOOD)
             )
             tradeDao.insertItems(newItems)
             
@@ -214,6 +218,19 @@ class VoyageRepository(
     // 6. [New] 무역 시스템 (Trade System)
     // ----------------------------------------------------------------
     
+    // 순수 인벤토리 Flow 반환
+    fun getInventoryFlow(): Flow<List<Pair<Item, Int>>> {
+        val inventoryFlow = tradeDao.getInventory(1) // Ship ID 1 고정
+        val itemsFlow = tradeDao.getAllItems()
+        
+        return combine(inventoryFlow, itemsFlow) { inventory, items ->
+            inventory.mapNotNull { invItem ->
+                val item = items.find { it.id == invItem.itemId } ?: return@mapNotNull null
+                Pair(item, invItem.quantity)
+            }
+        }
+    }
+
     // UI용 결합 데이터 반환
     fun getMarketDataFlow(portId: Long): Flow<List<Triple<Market, Item, Int>>> {
         val marketFlow = tradeDao.getMarketList(portId)
@@ -229,37 +246,25 @@ class VoyageRepository(
         }
     }
 
-    suspend fun buyItem(itemId: Long, price: Int, quantity: Int): Boolean {
-        val userStatus = voyageDao.getUserStatus().first() ?: return false
+    // [Changed] Boolean -> Int (구매 후 총 수량 반환, 실패 시 -1)
+    suspend fun buyItem(itemId: Long, price: Int, quantity: Int): Int {
+        val userStatus = voyageDao.getUserStatus().first() ?: return -1
         val totalCost = price * quantity
         
-        if (userStatus.gold < totalCost) return false // 돈 부족
+        if (userStatus.gold < totalCost) return -1 // 돈 부족
 
         // 골드 차감
         val newUserStatus = userStatus.copy(gold = userStatus.gold - totalCost)
         voyageDao.insertUserStatus(newUserStatus)
 
-        // 인벤토리 추가
-        val currentInv = tradeDao.getInventory(1).first().find { it.itemId == itemId }
-        val newQty = (currentInv?.quantity ?: 0) + quantity
-        tradeDao.insertInventory(ShipInventory(shipId = 1, itemId = itemId, quantity = newQty))
-        
-        return true
+        // [Fixed] Dao 트랜잭션 사용 (안전한 구매)
+        return tradeDao.safeAddInventory(1, itemId, quantity)
     }
 
     suspend fun sellItem(itemId: Long, price: Int, quantity: Int): Boolean {
-        val currentInv = tradeDao.getInventory(1).first().find { it.itemId == itemId }
-        val currentQty = currentInv?.quantity ?: 0
-        
-        if (currentQty < quantity) return false // 재고 부족
-
-        // 인벤토리 차감
-        val newQty = currentQty - quantity
-        if (newQty > 0) {
-            tradeDao.updateInventoryQuantity(1, itemId, newQty)
-        } else {
-            tradeDao.deleteInventoryItem(1, itemId)
-        }
+        // [Fixed] Dao 트랜잭션 사용 (안전한 판매)
+        val result = tradeDao.safeConsumeInventory(1, itemId, quantity)
+        if (result == -1) return false // 재고 부족
 
         // 골드 증가
         val userStatus = voyageDao.getUserStatus().first() ?: return false
@@ -267,6 +272,28 @@ class VoyageRepository(
         voyageDao.insertUserStatus(newUserStatus)
         
         return true
+    }
+
+    suspend fun loadSupplyToShip(itemId: Long): String {
+        val currentShip = voyageDao.getShip().first() ?: return "선박 정보 없음"
+        // [Fixed] Flow 대신 suspend 함수로 최신 재고 직접 조회
+        // val inventoryItem = tradeDao.getInventoryItem(1, itemId) ?: return "아이템 없음" // Removed
+        val itemInfo = tradeDao.getAllItems().first().find { it.id == itemId } ?: return "아이템 정보 없음"
+
+        if (itemInfo.type != ItemType.FOOD) return "식량이 아닙니다."
+        
+        // [Fixed] Dao 트랜잭션 사용 (안전한 소모)
+        val newQty = tradeDao.safeConsumeInventory(1, itemId, 1) // 1개 소모
+        if (newQty == -1) return "수량 부족" // 혹은 아이템 없음
+
+        // 식량 충전
+        val addedSupply = itemInfo.effectValue.toDouble()
+        val newSupplies = (currentShip.supplies + addedSupply).coerceAtMost(currentShip.maxSupplies)
+        
+        val updatedShip = currentShip.copy(supplies = newSupplies)
+        saveShip(updatedShip)
+        
+        return "보급 완료! +${itemInfo.effectValue} (남은 재고: ${newQty})"
     }
 
     // ----------------------------------------------------------------
@@ -295,7 +322,7 @@ class VoyageRepository(
             destX = destX,
             destY = destY
         )
-        voyageDao.insertShip(updatedShip)
+        saveShip(updatedShip)
     }
 
     suspend fun checkYesterdaySuccess(): Boolean {
@@ -321,9 +348,23 @@ class VoyageRepository(
 
     suspend fun settleDailySailing(isSuccess: Boolean): String {
         val currentShip = voyageDao.getShip().first() ?: return "선박 정보 없음"
+        
+        // 1. 식량 체크 및 소모
+        val dailyCost = GameConstants.SUPPLY_CONSUMPTION_DAILY
+        if (currentShip.supplies < dailyCost) {
+            val driftShip = currentShip.copy(status = ShipStatus.ANCHORED) // 혹은 DOOMED
+            saveShip(driftShip)
+            return "⚠️ 식량이 부족하여 배가 표류했습니다! (이동 거리: 0km)"
+        }
+        
+        // 식량 차감
+        val suppliesAfterCost = currentShip.supplies - dailyCost
+        
         val moveDistance = if (isSuccess) GameConstants.DAILY_MOVE_SUCCESS else GameConstants.DAILY_MOVE_FAIL
         
         if (currentShip.destX == null || currentShip.destY == null) {
+            // 목적지가 없어도 식량은 소모됨 (바다 위에 떠있으므로)
+            saveShip(currentShip.copy(supplies = suppliesAfterCost))
             return "목적지 없음 (X:${currentShip.destX}, Y:${currentShip.destY})"
         }
 
@@ -332,6 +373,7 @@ class VoyageRepository(
         val totalDistance = sqrt(dx * dx + dy * dy)
         
         if (totalDistance < GameConstants.ARRIVAL_THRESHOLD) {
+             saveShip(currentShip.copy(supplies = suppliesAfterCost))
              return "이미 목적지에 있습니다. (거리: $totalDistance)"
         }
         
@@ -360,9 +402,10 @@ class VoyageRepository(
             posY = newY,
             destX = newDestX,
             destY = newDestY,
-            status = newStatus
+            status = newStatus,
+            supplies = suppliesAfterCost // [Changed] 소모된 식량 적용
         )
-        voyageDao.insertShip(updatedShip)
+        saveShip(updatedShip)
         return message
     }
 
@@ -370,24 +413,12 @@ class VoyageRepository(
         if (sailingJob?.isActive == true) return
 
         sailingJob = externalScope.launch {
+            // [Changed] 실시간 식량 소모 로직 제거 (일일 정산으로 이동)
             while (isActive) {
                 delay(1000L)
                 val currentShip = voyageDao.getShip().first() ?: break
                 if (currentShip.status != ShipStatus.SAILING) break
-                if (currentShip.supplies <= 0) {
-                    val driftShip = currentShip.copy(
-                        supplies = 0,
-                        status = ShipStatus.ANCHORED
-                    )
-                    voyageDao.insertShip(driftShip)
-                    break
-                }
-                
-                val newSupplies = currentShip.supplies - 1
-                val updatedShip = currentShip.copy(
-                    supplies = newSupplies
-                )
-                voyageDao.insertShip(updatedShip)
+                // 상태 모니터링만 유지
             }
         }
     }

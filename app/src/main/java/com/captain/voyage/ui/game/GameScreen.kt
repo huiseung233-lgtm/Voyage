@@ -3,7 +3,7 @@ package com.captain.voyage.ui.game
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
+import androidx.compose.foundation.background // [Fixed] Typo: backgraound -> background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +45,8 @@ import com.captain.voyage.data.model.ShipStatus
 import com.captain.voyage.ui.theme.VoyageTheme
 import com.captain.voyage.ui.trade.TradeDialog
 import com.captain.voyage.ui.trade.MarketItemUi
-import com.captain.voyage.ui.settlement.SettlementDialog // Added
+import com.captain.voyage.ui.settlement.SettlementDialog
+import com.captain.voyage.ui.game.InventoryDialog // Added
 
 @Composable
 fun GameScreen(
@@ -63,9 +64,12 @@ fun GameScreen(
     val showMarketDialog by viewModel.showMarketDialog.collectAsState()
     val marketItems by viewModel.marketItems.collectAsState()
     
-    val showSettlementDialog by viewModel.showSettlementDialog.collectAsState() // Added
+    val showSettlementDialog by viewModel.showSettlementDialog.collectAsState()
     val currentPortId by viewModel.currentPortId.collectAsState()
-    val currentPort by viewModel.currentPort.collectAsState() // Added
+    val currentPort by viewModel.currentPort.collectAsState()
+    
+    val showInventoryDialog by viewModel.showInventoryDialog.collectAsState() // Added
+    val inventoryItems by viewModel.inventoryItems.collectAsState() // Added
     
     val context = LocalContext.current
 
@@ -112,47 +116,76 @@ fun GameScreen(
                 .background(backgroundColor)
         ) {
             // 1. HUD (Top Left)
-            Card(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.TopStart)
-                    .clickable { viewModel.giveMeGold() }, // [Cheat] 클릭 시 골드 획득
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFD7CCC8)),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
+                // Gold HUD
+                Card(
+                    modifier = Modifier
+                        .clickable { viewModel.giveMeGold() }, // [Cheat] 클릭 시 골드 획득
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFD7CCC8)),
+                    elevation = CardDefaults.cardElevation(8.dp)
                 ) {
-                    Text("💰", fontSize = 18.sp)
-                    Text(
-                        text = "${userStatus?.gold ?: 0} G",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF3E2723),
-                        modifier = Modifier.padding(start = 4.dp, end = 16.dp)
-                    )
-                    
-                    // Separator
-                    Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color(0xFFA1887F)))
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("💰", fontSize = 18.sp)
+                        Text(
+                            text = "${userStatus?.gold ?: 0} G",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF3E2723),
+                            modifier = Modifier.padding(start = 4.dp, end = 16.dp)
+                        )
+                        
+                        // Separator
+                        Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color(0xFFA1887F)))
 
-                    // Status
-                    val (icon, text, color) = when (userStatus?.penaltyType) {
-                        PenaltyType.FATIGUE -> Triple("😫", "피로함", Color(0xFFF57F17))
-                        PenaltyType.LAZINESS -> Triple("💤", "나태함", Color(0xFF5D4037))
-                        PenaltyType.DOOM -> Triple("☠️", "위험!", Color(0xFFB71C1C))
-                        else -> Triple("⛵", "순항 중", Color(0xFF1B5E20))
+                        // Status
+                        val (icon, text, color) = when (userStatus?.penaltyType) {
+                            PenaltyType.FATIGUE -> Triple("😫", "피로함", Color(0xFFF57F17))
+                            PenaltyType.LAZINESS -> Triple("💤", "나태함", Color(0xFF5D4037))
+                            PenaltyType.DOOM -> Triple("☠️", "위험!", Color(0xFFB71C1C))
+                            else -> Triple("⛵", "순항 중", Color(0xFF1B5E20))
+                        }
+
+                        Text(icon, fontSize = 18.sp, modifier = Modifier.padding(start = 16.dp))
+                        Text(
+                            text = text,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = color,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
                     }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Supply HUD
+                val supplies = ship?.supplies ?: 0.0
+                val maxSupplies = ship?.maxSupplies ?: 1000.0
+                val supplyRatio = (supplies / maxSupplies).toFloat().coerceIn(0f, 1f)
+                val supplyColor = if (supplyRatio < 0.2f) Color(0xFFD32F2F) else Color(0xFF388E3C)
 
-                    Text(icon, fontSize = 18.sp, modifier = Modifier.padding(start = 16.dp))
-                    Text(
-                        text = text,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = color,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE0F7FA)),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🍞", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${supplies.toInt()} / ${maxSupplies.toInt()}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = supplyColor
+                        )
+                    }
                 }
             }
 
@@ -167,10 +200,24 @@ fun GameScreen(
                 Icon(Icons.Default.Close, contentDescription = "Exit", tint = Color(0xFFBF360C))
             }
 
-            // 3. Shop & Settlement (Only visible when Anchored AND at Port)
-            val supplies = ship?.supplies ?: 0
-            if (!isSailing && (isAtPort || supplies <= 0)) {
-                // 상점 버튼 (오른쪽)
+            // 3. Shop & Settlement & Inventory Buttons
+            
+            // 인벤토리 버튼 (항상 표시 - 우측 하단, 액션 버튼 위)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 140.dp, end = 24.dp)
+                    .size(64.dp)
+                    .background(Color(0xFF8D6E63), CircleShape)
+                    .clickable { viewModel.openInventory() },
+                contentAlignment = Alignment.Center
+            ) {
+                 Text("🎒", fontSize = 32.sp)
+            }
+            
+            val supplies = ship?.supplies ?: 0.0
+            if (!isSailing && (isAtPort || supplies <= 0.0)) {
+                // 상점 버튼 (중앙 우측)
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -250,10 +297,19 @@ fun GameScreen(
             )
         }
         
+        // [New] 인벤토리 다이얼로그
+        if (showInventoryDialog) {
+            InventoryDialog(
+                inventoryItems = inventoryItems,
+                onUseItem = { itemId -> viewModel.loadSupply(itemId) },
+                onDismiss = { viewModel.closeInventory() }
+            )
+        }
+        
         // [New] 무역 다이얼로그
         if (showMarketDialog) {
             TradeDialog(
-                portName = "항구 #${currentPortId ?: "?"}",
+                portName = "항구 #${currentPortId ?: "Unknown"}", // [Fixed] Clearer string template
                 gold = userStatus?.gold ?: 0,
                 marketItems = marketItems,
                 onBuy = { item, qty -> viewModel.buyItem(item, qty) },
@@ -265,8 +321,8 @@ fun GameScreen(
         // [New] 정착지 다이얼로그
         if (showSettlementDialog) {
             SettlementDialog(
-                portId = currentPortId ?: 0, // 0이면 예외처리 혹은 시작항구
-                portName = "항구 #${currentPortId ?: "?"}",
+                portId = currentPortId ?: 0L, // [Fixed] Type mismatch: Long? ?: Long
+                portName = "항구 #${currentPortId ?: "Unknown"}",
                 onDismiss = { viewModel.closeSettlement() }
             )
         }

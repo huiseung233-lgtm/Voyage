@@ -35,8 +35,11 @@ interface VoyageDao {
     @Query("SELECT * FROM ships WHERE id = 1")
     fun getShip(): Flow<Ship?>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertShip(ship: Ship)
+
+    @Update
+    suspend fun updateShip(ship: Ship)
 
     @Query("SELECT * FROM user_status WHERE id = 1")
     fun getUserStatus(): Flow<UserStatus?>

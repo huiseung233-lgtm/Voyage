@@ -23,6 +23,6 @@ data class Ship(
     val posY: Double = 0.0,      // 현재 Y 좌표
     val destX: Double? = null,   // 목적지 X 좌표 (null이면 정박 중)
     val destY: Double? = null,   // 목적지 Y 좌표
-    val supplies: Int = 100,     // 현재 식량/물 (0~100)
-    val maxSupplies: Int = 100   // 최대 적재량
+    val supplies: Double = 500.0,     // [Changed] 현재 식량/물 (Double)
+    val maxSupplies: Double = 1000.0   // [Changed] 최대 적재량 (Double)
 )

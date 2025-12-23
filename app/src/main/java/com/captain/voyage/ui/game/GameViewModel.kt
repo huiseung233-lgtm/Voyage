@@ -76,6 +76,13 @@ class GameViewModel @Inject constructor(
     private val _showSettlementDialog = MutableStateFlow(false)
     val showSettlementDialog: StateFlow<Boolean> = _showSettlementDialog.asStateFlow()
 
+    // 6. [New] 인벤토리 (Inventory) 상태
+    private val _showInventoryDialog = MutableStateFlow(false)
+    val showInventoryDialog: StateFlow<Boolean> = _showInventoryDialog.asStateFlow()
+
+    private val _inventoryItems = MutableStateFlow<List<InventoryItemUi>>(emptyList())
+    val inventoryItems: StateFlow<List<InventoryItemUi>> = _inventoryItems.asStateFlow()
+
     init {
         viewModelScope.launch {
             try {
@@ -136,9 +143,9 @@ class GameViewModel @Inject constructor(
 
     fun buyItem(itemUi: MarketItemUi, quantity: Int) {
         viewModelScope.launch {
-            val success = repository.buyItem(itemUi.item.id, itemUi.market.buyPrice, quantity)
-            if (success) {
-                _toastMessage.value = "${itemUi.item.name} 구매 완료!"
+            val currentQty = repository.buyItem(itemUi.item.id, itemUi.market.buyPrice, quantity)
+            if (currentQty != -1) {
+                _toastMessage.value = "${itemUi.item.name} 구매 완료! (보유: ${currentQty}개)"
             } else {
                 _toastMessage.value = "골드가 부족합니다!"
             }
@@ -153,6 +160,14 @@ class GameViewModel @Inject constructor(
             } else {
                 _toastMessage.value = "재고가 부족합니다!"
             }
+        }
+    }
+
+    // [New] 인벤토리 -> 식량 창고 이동
+    fun loadSupply(itemId: Long) {
+        viewModelScope.launch {
+            val resultMsg = repository.loadSupplyToShip(itemId)
+            _toastMessage.value = resultMsg
         }
     }
 
@@ -181,8 +196,10 @@ class GameViewModel @Inject constructor(
         if (!TimeManager.canSail()) {
             _toastMessage.value = "⛔ 선박 정비 시간(02:00~07:00)입니다."
         }
-        if (currentShip.supplies <= 0) {
-             _toastMessage.value = "식량이 부족하여 출항할 수 없습니다!"
+        
+        // [Changed] 식량 체크 강화
+        if (currentShip.supplies < GameConstants.SUPPLY_CONSUMPTION_DAILY) {
+             _toastMessage.value = "식량이 부족하여 출항할 수 없습니다! (필요: ${GameConstants.SUPPLY_CONSUMPTION_DAILY})"
              return
         }
 
@@ -256,5 +273,21 @@ class GameViewModel @Inject constructor(
 
     fun closeSettlement() {
         _showSettlementDialog.value = false
+    }
+
+    // --- 인벤토리 ---
+    fun openInventory() {
+        viewModelScope.launch {
+            repository.getInventoryFlow().collect { list ->
+                _inventoryItems.value = list.map { (item, qty) ->
+                    InventoryItemUi(item, qty)
+                }
+            }
+        }
+        _showInventoryDialog.value = true
+    }
+
+    fun closeInventory() {
+        _showInventoryDialog.value = false
     }
 }

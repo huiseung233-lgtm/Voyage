@@ -36,7 +36,7 @@ import com.captain.voyage.data.model.UserStatus
         Settlement::class,
         Building::class
     ],
-    version = 11, // Version up (Foreign Key added)
+    version = 12, // Version up (Ship supply type change & Item effectValue added)
     exportSchema = false
 )
 @TypeConverters(Converters::class) // 기존 번역가 유지

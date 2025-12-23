@@ -69,7 +69,7 @@
 - [x] Hilt & Navigation, 지도 Canvas, 항해 엔진, 기초 무역 시스템 구현 완료.
 
 #### Phase 4: 시스템 확장 및 폴리싱 (진행 중)
-1.  **[ ] 식량(Supplies) 구매 시스템:** 상점에서 아이템 구매 시 선박 보급 연동.
+1.  **[x] 식량(Supplies) 구매 시스템:** 상점에서 아이템 구매 시 선박 보급 연동.
 2.  **[ ] Goals 탭 월드맵 미리보기:** 목표 화면 상단 배너에 실시간 맵 일부 표시.
 3.  **[ ] ComfyUI 설치:** 로컬 에셋 제작 환경 구축 (Stable Diffusion).
 4.  **[ ] GameActivity UI 정리:** 레이아웃 최적화 및 HUD/에셋 규격 정리.
@@ -86,6 +86,11 @@
 ---
 
 ## 📝 Recent Updates
+- **[Feature]** 식량(Supplies) 시스템: 선박에 식량 탱크 탑재, 항해 시 일일 소모 로직 구현.
+- **[Feature]** 인벤토리 & 보급: 인벤토리 UI 및 다이얼로그 신설, 식량 아이템(쌀)으로 선박 보급 기능 추가.
+- **[Fix]** 데이터 무결성 강화 (Critical):
+    - `TradeDao`: 원자적 연산(Atomic Update/Insert) 도입으로 구매/소모 시 동시성 이슈 및 재고 증발 버그 해결.
+    - `VoyageDao`: 선박 저장 시 `REPLACE` 대신 `UPDATE` 사용으로 외래 키 연쇄 삭제(Cascade Delete)에 의한 인벤토리 초기화 문제 해결.
 - **[Feature]** 정착지(Settlement) 시스템: 맵 남단 '신대륙 전초기지'에 영지 건설 및 건물 업그레이드 기능 추가.
 - **[Visual]** 지도 대대적 개선: 줌 인/아웃, 드래그 탐색, 배 방향 화살표 및 카메라 추적 로직 적용.
 - **[Refactor]** 데이터 무결성 강화: Room 외래키 제약 조건 추가 및 `GameConstants`를 통한 매직 넘버 정리.

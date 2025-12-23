@@ -12,12 +12,14 @@ data class Item(
     val name: String,        // 예: "쌀", "후추", "비단"
     val basePrice: Int,      // 기본 가격
     val description: String,
-    val type: ItemType = ItemType.TRADE_GOOD // 무역품, 소비품 등 구분
+    val type: ItemType = ItemType.TRADE_GOOD, // 무역품, 소비품 등 구분
+    val effectValue: Int = 0 // [New] 사용 시 효과값 (예: 식량 +30)
 )
 
 enum class ItemType {
     TRADE_GOOD, // 교역품 (시세 차익용)
-    SUPPLY,     // 보급품 (식량, 물 - 직접 사용 가능)
+    FOOD,       // 식량 (보급품)
+    SUPPLY,     // 기타 보급품 (물 등)
     EQUIPMENT   // 장비 (대포 등)
 }
 
