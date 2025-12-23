@@ -23,6 +23,12 @@ enum class ItemType {
     EQUIPMENT   // 장비 (대포 등)
 }
 
+// [Optimization] JOIN 쿼리 결과 매핑용 DTO
+data class InventoryItemDto(
+    @androidx.room.Embedded val item: Item,
+    val quantity: Int
+)
+
 // 2. 항구별 시장 (Market)
 // 어떤 항구에서, 어떤 아이템을, 얼마에 파는가?
 @Entity(

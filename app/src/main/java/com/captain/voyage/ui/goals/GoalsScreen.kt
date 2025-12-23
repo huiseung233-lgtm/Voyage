@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -95,17 +96,48 @@ fun GoalsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.4f)
-                .background(Color(0xFF8D6E63)) // 지도 배경색
-                .clickable { showBigMap = true },
-            contentAlignment = Alignment.Center
+                .background(Color(0xFF1A237E)) // 지도 배경색
+                .clickable { showBigMap = true } // 클릭 시 전체 지도 열기
+                .clipToBounds() // [Fixed]
         ) {
-            // Placeholder for Map Image
-            Text(
-                text = "🗺️ World Map (Tap to Expand)",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+            val ports by viewModel.allPorts.collectAsState()
+            val ship by viewModel.ship.collectAsState()
+            
+            // [Fixed] 당직 교대 로직 반영
+            val isAtPort = ship?.destX == null
+
+            // 미니맵 배경 애니메이션
+            com.captain.voyage.ui.animation.SailingScene(
+                modifier = Modifier.fillMaxSize(),
+                viewMode = com.captain.voyage.ui.animation.ViewMode.TOP_DOWN,
+                isMoving = ship?.status == com.captain.voyage.data.model.ShipStatus.SAILING || !isAtPort,
+                isAtPort = ship?.status == com.captain.voyage.data.model.ShipStatus.ANCHORED && isAtPort
             )
+
+            // 미니맵 (ReadOnly, 줌 아웃 상태)
+            WorldMapView(
+                modifier = Modifier.fillMaxSize(),
+                ports = ports,
+                ship = ship,
+                isReadOnly = true, // 터치 무시
+                initialZoom = 0.5f // 넓게 보기
+            )
+            
+            // 오버레이 (클릭 유도)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.1f)), // 살짝 어둡게 (텍스트 가독성)
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Text(
+                    text = "🗺️ 터치하여 지도 크게 보기",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
         }
 
         // 2. Goals List
@@ -328,7 +360,7 @@ fun BigMapDialog(
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            // 실제 지도 렌더링
+            // 실제 지도 렌더링 (배경 애니메이션 제거됨)
             WorldMapView(
                 modifier = Modifier.fillMaxSize(),
                 ports = ports,

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import com.captain.voyage.data.model.InventoryItemDto // Added
 import com.captain.voyage.data.model.Item
 import com.captain.voyage.data.model.Market
 import com.captain.voyage.data.model.ShipInventory
@@ -54,6 +55,15 @@ abstract class TradeDao {
     // [New] DB 원자적 연산: 수량 감소 (수량이 충분할 때만 차감)
     @Query("UPDATE ship_inventory SET quantity = quantity - :amount WHERE shipId = :shipId AND itemId = :itemId AND quantity >= :amount")
     abstract suspend fun decreaseQuantity(shipId: Int, itemId: Long, amount: Int): Int
+
+    // [Optimization] SQL JOIN을 이용한 인벤토리 조회 (메모리 조인 대체)
+    @Query("""
+        SELECT items.*, inv.quantity 
+        FROM ship_inventory AS inv
+        INNER JOIN items ON inv.itemId = items.id
+        WHERE inv.shipId = :shipId
+    """)
+    abstract fun getInventoryWithItems(shipId: Int): Flow<List<InventoryItemDto>>
 
     // [Fixed] 안전한 구매 트랜잭션 (Update first, Insert later)
     @Transaction

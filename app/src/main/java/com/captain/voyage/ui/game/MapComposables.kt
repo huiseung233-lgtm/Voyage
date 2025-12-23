@@ -48,6 +48,8 @@ fun WorldMapView(
     modifier: Modifier = Modifier,
     ports: List<Port>,
     ship: Ship?,
+    isReadOnly: Boolean = false, // [Added]
+    initialZoom: Float = 1f,     // [Added]
     onMapClick: ((Float, Float) -> Unit)? = null
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -56,7 +58,7 @@ fun WorldMapView(
     // [State]
     var isCameraLocked by remember { mutableStateOf(true) }
     var manualOffset by remember { mutableStateOf(Offset.Zero) }
-    var zoomScale by remember { mutableStateOf(1f) }
+    var zoomScale by remember { mutableStateOf(initialZoom) }
 
     // [Visual Assets]
     val shipPath = remember(density) {
@@ -127,52 +129,58 @@ fun WorldMapView(
             .background(oceanColor)
             .fillMaxSize()
     ) {
+        val inputModifier = if (isReadOnly) Modifier else Modifier
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    isCameraLocked = false
+                    zoomScale = (zoomScale * zoom).coerceIn(0.5f, 3f)
+                    manualOffset += pan / zoomScale 
+                }
+            }
+            .pointerInput(ship, isCameraLocked, manualOffset, zoomScale) {
+                val width = size.width.toFloat()
+                val height = size.height.toFloat()
+                
+                val currentCamX = if (isCameraLocked && ship != null) {
+                    width / 2f - ship.posX.toFloat()
+                } else {
+                    manualOffset.x
+                }
+                val currentCamY = if (isCameraLocked && ship != null) {
+                    height / 2f - ship.posY.toFloat()
+                } else {
+                    manualOffset.y
+                }
+
+                detectTapGestures { offset ->
+                    val cx = width / 2f
+                    val cy = height / 2f
+                    val relX = offset.x - cx
+                    val relY = offset.y - cy
+                    val unscaledRelX = relX / zoomScale
+                    val unscaledRelY = relY / zoomScale
+                    val unscaledScreenX = unscaledRelX + cx
+                    val unscaledScreenY = unscaledRelY + cy
+                    val worldX = unscaledScreenX - currentCamX
+                    val worldY = unscaledScreenY - currentCamY
+                    onMapClick?.invoke(worldX, worldY)
+                }
+            }
+
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        isCameraLocked = false
-                        zoomScale = (zoomScale * zoom).coerceIn(0.5f, 3f)
-                        manualOffset += pan / zoomScale 
-                    }
-                }
-                .pointerInput(ship, isCameraLocked, manualOffset, zoomScale) {
-                    val width = size.width.toFloat()
-                    val height = size.height.toFloat()
-                    
-                    val currentCamX = if (isCameraLocked && ship != null) {
-                        width / 2f - ship.posX.toFloat()
-                    } else {
-                        manualOffset.x
-                    }
-                    val currentCamY = if (isCameraLocked && ship != null) {
-                        height / 2f - ship.posY.toFloat()
-                    } else {
-                        manualOffset.y
-                    }
-
-                    detectTapGestures { offset ->
-                        val cx = width / 2f
-                        val cy = height / 2f
-                        val relX = offset.x - cx
-                        val relY = offset.y - cy
-                        val unscaledRelX = relX / zoomScale
-                        val unscaledRelY = relY / zoomScale
-                        val unscaledScreenX = unscaledRelX + cx
-                        val unscaledScreenY = unscaledRelY + cy
-                        val worldX = unscaledScreenX - currentCamX
-                        val worldY = unscaledScreenY - currentCamY
-                        onMapClick?.invoke(worldX, worldY)
-                    }
-                }
+                .then(inputModifier)
         ) {
             val width = size.width
             val height = size.height
             val cx = width / 2f
             val cy = height / 2f
 
-            if (isCameraLocked && ship != null) {
+            // ReadOnly 모드면 항상 카메라 잠금 (배 추적)
+            val effectiveLocked = isReadOnly || isCameraLocked
+
+            if (effectiveLocked && ship != null) {
                 val lockedX = width / 2f - ship.posX.toFloat()
                 val lockedY = height / 2f - ship.posY.toFloat()
                 manualOffset = Offset(lockedX, lockedY)
@@ -263,8 +271,8 @@ fun WorldMapView(
             }
         }
         
-        // Re-center Button
-        if (!isCameraLocked || zoomScale != 1f) {
+        // Re-center Button (Hide in ReadOnly Mode)
+        if (!isReadOnly && (!isCameraLocked || zoomScale != 1f)) {
             IconButton(
                 onClick = { 
                     isCameraLocked = true 

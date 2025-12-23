@@ -36,7 +36,7 @@ interface VoyageDao {
     fun getShip(): Flow<Ship?>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertShip(ship: Ship)
+    suspend fun insertShip(ship: Ship): Long
 
     @Update
     suspend fun updateShip(ship: Ship)

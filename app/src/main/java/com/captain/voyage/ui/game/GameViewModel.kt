@@ -39,6 +39,9 @@ class GameViewModel @Inject constructor(
     val ship = repository.ship.asLiveData()
     val userStatus = repository.userStatus.asLiveData()
     
+    // [New] 지도 표시를 위한 모든 항구 리스트
+    val allPorts = repository.allPorts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    
     // 현재 항구 감지 (반경 50.0 이내)
     // 항구에 도착했다면 해당 Port 객체를 반환, 아니면 null
     val currentPort = combine(repository.ship, repository.allPorts) { ship, ports ->
@@ -273,6 +276,13 @@ class GameViewModel @Inject constructor(
 
     fun closeSettlement() {
         _showSettlementDialog.value = false
+    }
+
+    // --- 지도 상호작용 ---
+    fun setDestination(x: Float, y: Float) {
+        viewModelScope.launch {
+            repository.setDestination(x, y)
+        }
     }
 
     // --- 인벤토리 ---

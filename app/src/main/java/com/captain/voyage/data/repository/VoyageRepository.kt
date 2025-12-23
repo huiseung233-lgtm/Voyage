@@ -12,6 +12,7 @@ import com.captain.voyage.data.model.BuildingType // Added
 import com.captain.voyage.data.model.DailyLog
 import com.captain.voyage.data.model.Goal
 import com.captain.voyage.data.model.GoalType
+import com.captain.voyage.data.model.InventoryItemDto // Added
 import com.captain.voyage.data.model.Item
 import com.captain.voyage.data.model.ItemType
 import com.captain.voyage.data.model.Market
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map // Added
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -86,11 +88,14 @@ class VoyageRepository(
     val ship: Flow<Ship?> = voyageDao.getShip()
     val userStatus: Flow<UserStatus?> = voyageDao.getUserStatus()
 
+    @androidx.room.Transaction
     suspend fun saveShip(ship: Ship) {
-        // [Fixed] REPLACE를 쓰면 외래 키(Cascade) 때문에 인벤토리가 수장됨.
-        // 먼저 INSERT(IGNORE) 시도 후, 실패하면 UPDATE 수행.
-        voyageDao.insertShip(ship)
-        voyageDao.updateShip(ship)
+        // [Optimization] 불필요한 Update 호출 방지 (Upsert 로직 구현)
+        val rowId = voyageDao.insertShip(ship)
+        if (rowId == -1L) {
+            // 이미 존재하면 업데이트 (외래키 보존)
+            voyageDao.updateShip(ship)
+        }
     }
 
     suspend fun saveUserStatus(status: UserStatus) {
@@ -220,13 +225,10 @@ class VoyageRepository(
     
     // 순수 인벤토리 Flow 반환
     fun getInventoryFlow(): Flow<List<Pair<Item, Int>>> {
-        val inventoryFlow = tradeDao.getInventory(1) // Ship ID 1 고정
-        val itemsFlow = tradeDao.getAllItems()
-        
-        return combine(inventoryFlow, itemsFlow) { inventory, items ->
-            inventory.mapNotNull { invItem ->
-                val item = items.find { it.id == invItem.itemId } ?: return@mapNotNull null
-                Pair(item, invItem.quantity)
+        // [Optimization] SQL JOIN 사용으로 메모리 연산 제거
+        return tradeDao.getInventoryWithItems(1).map { dtoList: List<InventoryItemDto> ->
+            dtoList.map { dto ->
+                Pair(dto.item, dto.quantity)
             }
         }
     }

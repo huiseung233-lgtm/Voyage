@@ -3,7 +3,7 @@ package com.captain.voyage.ui.game
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background // [Fixed] Typo: backgraound -> background
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +46,10 @@ import com.captain.voyage.ui.theme.VoyageTheme
 import com.captain.voyage.ui.trade.TradeDialog
 import com.captain.voyage.ui.trade.MarketItemUi
 import com.captain.voyage.ui.settlement.SettlementDialog
-import com.captain.voyage.ui.game.InventoryDialog // Added
+import com.captain.voyage.ui.game.InventoryDialog
+import com.captain.voyage.ui.animation.SailingScene
+import com.captain.voyage.ui.animation.ViewMode
+import kotlin.math.atan2
 
 @Composable
 fun GameScreen(
@@ -68,8 +71,10 @@ fun GameScreen(
     val currentPortId by viewModel.currentPortId.collectAsState()
     val currentPort by viewModel.currentPort.collectAsState()
     
-    val showInventoryDialog by viewModel.showInventoryDialog.collectAsState() // Added
-    val inventoryItems by viewModel.inventoryItems.collectAsState() // Added
+    val showInventoryDialog by viewModel.showInventoryDialog.collectAsState()
+    val inventoryItems by viewModel.inventoryItems.collectAsState()
+    
+    val allPorts by viewModel.allPorts.collectAsState()
     
     val context = LocalContext.current
 
@@ -80,7 +85,7 @@ fun GameScreen(
         }
     }
 
-    // [New] 데이터 로딩 대기 (팅김 방지)
+    // 데이터 로딩 대기 (팅김 방지)
     if (ship == null) {
         Box(
             modifier = Modifier.fillMaxSize().background(Color(0xFF1A237E)),
@@ -113,8 +118,35 @@ fun GameScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
+                .background(Color.Black) // 기본 배경
         ) {
+            // 0. Sailing Animation Scene (Background)
+            val rotation = ship?.let {
+                if (it.destX != null && it.destY != null) {
+                    val dx = it.destX!! - it.posX
+                    val dy = it.destY!! - it.posY
+                    (atan2(dy, dx) * 180 / Math.PI).toFloat() + 90f
+                } else 0f
+            } ?: 0f
+
+            // [Fixed] 당직 교대 로직: 항해가 아니더라도 항구가 없는 바다 위라면 움직이는 애니메이션 유지
+            val isVisuallyMoving = isSailing || !isAtPort
+
+            SailingScene(
+                modifier = Modifier.fillMaxSize(),
+                viewMode = ViewMode.ISOMETRIC, // 입체 뷰
+                shipRotation = rotation,
+                isMoving = isVisuallyMoving,
+                isAtPort = isAtPort && !isSailing // 정박 중이고 항구 근처일 때만 부두 표시
+            )
+
+            // Overlay for status color
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backgroundColor.copy(alpha = 0.1f)) 
+            )
+
             // 1. HUD (Top Left)
             Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
                 // Gold HUD
