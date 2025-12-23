@@ -252,47 +252,29 @@ fun GameScreen(
                 // 상점 버튼 (중앙 우측)
                 Box(
                     modifier = Modifier
-                        .align(Alignment.Center)
-                        .offset(x = 60.dp, y = (-100).dp)
-                        .size(120.dp)
-                        .background(Color(0x80FFEB3B), RoundedCornerShape(8.dp))
-                        .clickable {
-                            viewModel.openMarket()
-                        },
-                    contentAlignment = Alignment.Center
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 32.dp)
+                        .offset(y = (-40).dp)
                 ) {
-                     Text(
-                         text = "🏪 상점",
-                         color = Color.White,
-                         fontWeight = FontWeight.Bold,
-                         modifier = Modifier
-                             .align(Alignment.BottomCenter)
-                             .background(Color(0x80000000))
-                             .padding(4.dp)
-                     )
+                    GameMenuButton(
+                        icon = "🏪",
+                        label = "상점",
+                        onClick = { viewModel.openMarket() }
+                    )
                 }
 
-                // [New] 정착지 버튼 (왼쪽) - 신대륙(본토)에서만 가능
+                // 정착지 버튼 (중앙 좌측) - 신대륙(본토)에서만 가능
                 if (currentPort?.canEstablishSettlement == true) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.Center)
-                            .offset(x = (-60).dp, y = (-100).dp)
-                            .size(120.dp)
-                            .background(Color(0x808D6E63), RoundedCornerShape(8.dp))
-                            .clickable {
-                                viewModel.openSettlement()
-                            },
-                        contentAlignment = Alignment.Center
+                            .align(Alignment.CenterStart)
+                            .padding(start = 32.dp)
+                            .offset(y = (-40).dp)
                     ) {
-                        Text(
-                            text = "🏰 정착지",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .background(Color(0x80000000))
-                                .padding(4.dp)
+                        GameMenuButton(
+                            icon = "🏰",
+                            label = "정착지",
+                            onClick = { viewModel.openSettlement() }
                         )
                     }
                 }
@@ -358,5 +340,41 @@ fun GameScreen(
                 onDismiss = { viewModel.closeSettlement() }
             )
         }
+    }
+}
+
+@Composable
+fun GameMenuButton(
+    icon: String,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        androidx.compose.material3.Surface(
+            shape = CircleShape,
+            color = Color(0xFFFFF8E1), // Cream color
+            shadowElevation = 6.dp,
+            modifier = Modifier.size(72.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(text = icon, fontSize = 32.sp)
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            style = androidx.compose.ui.text.TextStyle(
+                shadow = androidx.compose.ui.graphics.Shadow(
+                    color = Color.Black,
+                    blurRadius = 4f
+                )
+            )
+        )
     }
 }

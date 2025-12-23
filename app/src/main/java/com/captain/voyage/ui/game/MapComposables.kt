@@ -43,17 +43,48 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
+data class MapTheme(
+    val oceanColor: Color,
+    val gridColor: Color,
+    val shipColor: Color,
+    val portColor: Color,
+    val routeColor: Color,
+    val textColor: Color
+)
+
+val DigitalTheme = MapTheme(
+    oceanColor = Color(0xFF1A237E),
+    gridColor = Color(0x30FFFFFF),
+    shipColor = Color(0xFFFFD54F),
+    portColor = Color(0xFF4FC3F7),
+    routeColor = Color(0x80FFD54F),
+    textColor = Color.White
+)
+
+val PaperTheme = MapTheme(
+    oceanColor = Color(0xFFE0C9A6), // 양피지 베이지
+    gridColor = Color(0x203E2723),  // 연한 갈색
+    shipColor = Color(0xFFB71C1C),  // 붉은 잉크
+    portColor = Color(0xFF3E2723),  // 짙은 갈색
+    routeColor = Color(0x803E2723), // 갈색 경로
+    textColor = Color(0xFF3E2723)
+)
+
 @Composable
 fun WorldMapView(
     modifier: Modifier = Modifier,
     ports: List<Port>,
     ship: Ship?,
-    isReadOnly: Boolean = false, // [Added]
-    initialZoom: Float = 1f,     // [Added]
+    isReadOnly: Boolean = false,
+    initialZoom: Float = 1f,
+    isPaperMap: Boolean = false, // Added parameter
     onMapClick: ((Float, Float) -> Unit)? = null
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
+
+    // [Theme Selection]
+    val theme = if (isPaperMap) PaperTheme else DigitalTheme
 
     // [State]
     var isCameraLocked by remember { mutableStateOf(true) }
@@ -97,13 +128,7 @@ fun WorldMapView(
         }
     }
     
-    // [Colors]
-    val oceanColor = Color(0xFF1A237E)
-    val gridColor = Color(0x30FFFFFF)
-    val shipColor = Color(0xFFFFD54F)
-    val portColor = Color(0xFF4FC3F7)
-    val routeColor = Color(0x80FFD54F)
-    val textColor = Color.White
+    // [Colors] - Removed local vals, use theme.xxx
     val indicatorColor = Color(0xFFFF5252)
 
     // [Rotation]
@@ -126,7 +151,7 @@ fun WorldMapView(
     // [Layout & Camera]
     Box(
         modifier = modifier
-            .background(oceanColor)
+            .background(theme.oceanColor)
             .fillMaxSize()
     ) {
         val inputModifier = if (isReadOnly) Modifier else Modifier
@@ -197,11 +222,11 @@ fun WorldMapView(
                 // Grid
                 for (x in worldMin.toInt()..worldMax.toInt() step gridSize.toInt()) {
                     val screenX = x + camX
-                    drawLine(gridColor, Offset(screenX, 0f), Offset(screenX, height), strokeWidth = 1f / zoomScale, pathEffect = gridPathEffect)
+                    drawLine(theme.gridColor, Offset(screenX, 0f), Offset(screenX, height), strokeWidth = 1f / zoomScale, pathEffect = gridPathEffect)
                 }
                 for (y in worldMin.toInt()..worldMax.toInt() step gridSize.toInt()) {
                     val screenY = y + camY
-                    drawLine(gridColor, Offset(0f, screenY), Offset(width, screenY), strokeWidth = 1f / zoomScale, pathEffect = gridPathEffect)
+                    drawLine(theme.gridColor, Offset(0f, screenY), Offset(width, screenY), strokeWidth = 1f / zoomScale, pathEffect = gridPathEffect)
                 }
 
                 // Route
@@ -209,10 +234,10 @@ fun WorldMapView(
                     if (it.destX != null && it.destY != null) {
                         val start = Offset(it.posX.toFloat() + camX, it.posY.toFloat() + camY)
                         val end = Offset(it.destX!!.toFloat() + camX, it.destY!!.toFloat() + camY)
-                        drawLine(routeColor, start, end, strokeWidth = 2.dp.toPx() / zoomScale, pathEffect = routePathEffect)
+                        drawLine(theme.routeColor, start, end, strokeWidth = 2.dp.toPx() / zoomScale, pathEffect = routePathEffect)
                         val xSize = 6.dp.toPx() / zoomScale
-                        drawLine(routeColor, Offset(end.x - xSize, end.y - xSize), Offset(end.x + xSize, end.y + xSize), 3f / zoomScale)
-                        drawLine(routeColor, Offset(end.x - xSize, end.y + xSize), Offset(end.x + xSize, end.y - xSize), 3f / zoomScale)
+                        drawLine(theme.routeColor, Offset(end.x - xSize, end.y - xSize), Offset(end.x + xSize, end.y + xSize), 3f / zoomScale)
+                        drawLine(theme.routeColor, Offset(end.x - xSize, end.y + xSize), Offset(end.x + xSize, end.y - xSize), 3f / zoomScale)
                     }
                 }
 
@@ -221,17 +246,20 @@ fun WorldMapView(
                     val px = port.posX.toFloat() + camX
                     val py = port.posY.toFloat() + camY
                     val center = Offset(px, py)
-                    drawCircle(portColor.copy(alpha = 0.3f), radius = 12.dp.toPx(), center = center)
-                    drawCircle(portColor, radius = 6.dp.toPx(), center = center)
+                    drawCircle(theme.portColor.copy(alpha = 0.3f), radius = 12.dp.toPx(), center = center)
+                    drawCircle(theme.portColor, radius = 6.dp.toPx(), center = center)
                     val textLayout = textMeasurer.measure(
                         text = port.name,
-                        style = TextStyle(color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        style = TextStyle(color = theme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     )
-                    drawRect(
-                        color = Color.Black.copy(alpha = 0.5f),
-                        topLeft = Offset(px + 10.dp.toPx(), py - 12.dp.toPx()),
-                        size = androidx.compose.ui.geometry.Size(textLayout.size.width.toFloat() + 8f, textLayout.size.height.toFloat() + 4f)
-                    )
+                    // 배경 사각형 없이 텍스트만 (깔끔하게) - 또는 반투명 배경
+                    if (!isPaperMap) {
+                         drawRect(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            topLeft = Offset(px + 10.dp.toPx(), py - 12.dp.toPx()),
+                            size = androidx.compose.ui.geometry.Size(textLayout.size.width.toFloat() + 8f, textLayout.size.height.toFloat() + 4f)
+                        )
+                    }
                     drawText(textLayoutResult = textLayout, topLeft = Offset(px + 14.dp.toPx(), py - 10.dp.toPx()))
                 }
 
@@ -241,7 +269,7 @@ fun WorldMapView(
                     val shipScreenY = it.posY.toFloat() + camY
                     translate(left = shipScreenX, top = shipScreenY) {
                         rotate(degrees = shipRotation, pivot = Offset.Zero) {
-                            drawPath(path = shipPath, color = shipColor)
+                            drawPath(path = shipPath, color = theme.shipColor)
                         }
                     }
                 }

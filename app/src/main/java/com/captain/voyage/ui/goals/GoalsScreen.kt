@@ -91,52 +91,64 @@ fun GoalsScreen(
             .fillMaxSize()
             .background(Color(0xFFD7CCC8))
     ) {
-        // 1. Map Banner (Top 40%)
+        // 1. Map Banner (Top 40%) - "Captain's Desk" Concept
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.4f)
-                .background(Color(0xFF1A237E)) // 지도 배경색
-                .clickable { showBigMap = true } // 클릭 시 전체 지도 열기
-                .clipToBounds() // [Fixed]
+                .background(Color(0xFF4E342E)) // Dark Wood Color (Desk)
+                .clickable { showBigMap = true }
+                .clipToBounds(),
+            contentAlignment = Alignment.Center
         ) {
             val ports by viewModel.allPorts.collectAsState()
             val ship by viewModel.ship.collectAsState()
-            
-            // [Fixed] 당직 교대 로직 반영
-            val isAtPort = ship?.destX == null
 
-            // 미니맵 배경 애니메이션
-            com.captain.voyage.ui.animation.SailingScene(
-                modifier = Modifier.fillMaxSize(),
-                viewMode = com.captain.voyage.ui.animation.ViewMode.TOP_DOWN,
-                isMoving = ship?.status == com.captain.voyage.data.model.ShipStatus.SAILING || !isAtPort,
-                isAtPort = ship?.status == com.captain.voyage.data.model.ShipStatus.ANCHORED && isAtPort
-            )
-
-            // 미니맵 (ReadOnly, 줌 아웃 상태)
-            WorldMapView(
-                modifier = Modifier.fillMaxSize(),
-                ports = ports,
-                ship = ship,
-                isReadOnly = true, // 터치 무시
-                initialZoom = 0.5f // 넓게 보기
-            )
-            
-            // 오버레이 (클릭 유도)
+            // Map Paper Effect
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.1f)), // 살짝 어둡게 (텍스트 가독성)
-                contentAlignment = Alignment.BottomCenter
+                    .padding(24.dp) // Desk Padding
+                    .shadow(16.dp, RoundedCornerShape(4.dp)) // Paper Shadow
+                    .clip(RoundedCornerShape(4.dp)) // Paper Shape
+                    .border(1.dp, Color(0xFF3E2723).copy(alpha = 0.5f), RoundedCornerShape(4.dp))
             ) {
-                Text(
-                    text = "🗺️ 터치하여 지도 크게 보기",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                // Antique Map View
+                WorldMapView(
+                    modifier = Modifier.fillMaxSize(),
+                    ports = ports,
+                    ship = ship,
+                    isReadOnly = true,
+                    initialZoom = 0.5f,
+                    isPaperMap = true // [New] Enable Paper Theme
                 )
+                
+                // Old Paper Texture Overlay (Optional subtle noise/gradient could be added here)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0x103E2723)) // Slight sepia tint
+                )
+            }
+            
+            // "Expand Map" Label (Styled as a seal or tag)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp)
+                    .background(Color(0xCC000000), CircleShape)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.size(4.dp))
+                    Text(
+                        text = "지도로 항로 확인하기",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
