@@ -198,15 +198,36 @@ class GameViewModel @Inject constructor(
     private fun sailShip(currentShip: Ship) {
         if (!TimeManager.canSail()) {
             _toastMessage.value = "⛔ 선박 정비 시간(02:00~07:00)입니다."
-        }
-        
-        // [Changed] 식량 체크 강화
-        if (currentShip.supplies < GameConstants.SUPPLY_CONSUMPTION_DAILY) {
-             _toastMessage.value = "식량이 부족하여 출항할 수 없습니다! (필요: ${GameConstants.SUPPLY_CONSUMPTION_DAILY})"
-             return
+            // return // 테스트를 위해 주석 처리하거나 유지
         }
 
         viewModelScope.launch {
+            // 1. 잔여 거리가 남아있는지 확인 (재출항)
+            if (currentShip.remainingDistance > 0) {
+                // 식량 체크 (이동 시 소모될 수도 있으므로 최소한의 생존 식량은 있어야 함)
+                if (currentShip.supplies <= 0) {
+                     _toastMessage.value = "식량이 없어 움직일 수 없습니다!"
+                     return@launch
+                }
+                
+                val resultMsg = repository.moveShipTowardDestination()
+                _toastMessage.value = resultMsg
+                return@launch
+            }
+            
+            // 2. 잔여 거리가 없으면, 오늘 점호를 받았는지 확인
+            val hasBriefed = repository.hasBriefedToday()
+            if (hasBriefed) {
+                _toastMessage.value = "🌙 오늘의 항해력을 모두 소모했습니다. 내일 다시 출항하세요!"
+                return@launch
+            }
+
+            // 3. 점호 진행 (식량 체크)
+            if (currentShip.supplies < GameConstants.SUPPLY_CONSUMPTION_DAILY) {
+                 _toastMessage.value = "식량이 부족하여 출항할 수 없습니다! (필요: ${GameConstants.SUPPLY_CONSUMPTION_DAILY})"
+                 return@launch
+            }
+
             val data = repository.getYesterdayBriefing()
             _briefingData.value = data
             _showBriefing.value = true
@@ -219,26 +240,31 @@ class GameViewModel @Inject constructor(
             _showBriefing.value = false
             
             val finalSuccess = data.isSuccess && !hasConfessed
-            val resultMsg = repository.settleDailySailing(isSuccess = finalSuccess)
+            
+            // 1. 점호 정산 및 연료 충전
+            val chargeMsg = repository.confirmDailyBriefing(isSuccess = finalSuccess)
 
-            val refreshedShip = repository.ship.first()
-            if (refreshedShip != null) {
-                val sailingShip = refreshedShip.copy(status = ShipStatus.SAILING)
-                repository.saveShip(sailingShip)
-                repository.startVoyage()
-            }
+            // 2. 즉시 출항 (이동)
+            val moveMsg = repository.moveShipTowardDestination()
 
             val statusMsg = when {
                 hasConfessed -> "🚨 규율 위반 처리됨"
                 finalSuccess -> "🎉 목표 달성 성공!"
                 else -> "☁️ 목표 달성 실패..."
             }
-            _toastMessage.value = "☀️ 아침 점호 완료! $statusMsg\n$resultMsg"
+            _toastMessage.value = "☀️ 아침 점호 완료! $statusMsg\n$chargeMsg\n$moveMsg"
         }
     }
 
     fun dismissBriefing() {
         _showBriefing.value = false
+    }
+
+    fun resetDailyCheat() {
+        viewModelScope.launch {
+            val msg = repository.resetDailyStatus()
+            _toastMessage.postValue(msg)
+        }
     }
 
     fun refillSupplies() {

@@ -48,8 +48,8 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun VoyageTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Dynamic color is available on Android 12+. Set default to false for pixel art style.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -64,8 +64,14 @@ fun VoyageTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            // Force Nautical Theme for System Bars globally
+            val woodColor = VoyageWoodMedium.toArgb()
+            window.statusBarColor = woodColor
+            window.navigationBarColor = woodColor
+            
+            // Always light icons on dark wood background
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
         }
     }
 

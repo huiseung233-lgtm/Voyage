@@ -8,6 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import dagger.hilt.android.AndroidEntryPoint
 
+import com.captain.voyage.ui.theme.VoyageTheme
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -15,7 +17,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            VoyageApp()
+            VoyageTheme {
+                VoyageApp()
+            }
         }
     }
 }

@@ -17,3 +17,6 @@ val VoyageTextHint = Color(0xFF8D6E63)
 
 val VoyageBackgroundPaper = Color(0xFFF5F5DC)
 val VoyageBackgroundDark = Color(0xFFD7CCC8)
+
+val VoyageWoodDark = Color(0xFF1a120d)
+val VoyageWoodMedium = Color(0xFF3E2723) // Rich Dark Brown

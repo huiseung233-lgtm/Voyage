@@ -30,6 +30,7 @@ import com.captain.voyage.ui.rules.RulesScreen
 import com.captain.voyage.ui.rules.RulesViewModel
 import com.captain.voyage.ui.settings.SettingsScreen
 import com.captain.voyage.ui.settings.SettingsViewModel
+import com.captain.voyage.ui.theme.VoyageWoodMedium
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Home : Screen("home", "선장실", Icons.Default.Home)
@@ -46,7 +47,9 @@ fun VoyageApp() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = VoyageWoodMedium // Nautical wood color for the bottom bar
+            ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 items.forEach { screen ->

@@ -33,4 +33,8 @@ interface DailyLogDao {
     // 사용법: getLogsByMonth("2025-12%") -> 12월 데이터 전부 조회
     @Query("SELECT * FROM daily_logs WHERE date LIKE :monthPattern")
     fun getLogsByMonth(monthPattern: String): Flow<List<DailyLog>> // Changed to Flow
+
+    // [Cheat] 특정 날짜 로그 삭제
+    @Query("DELETE FROM daily_logs WHERE date = :date")
+    suspend fun deleteLogByDate(date: String)
 }

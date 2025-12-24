@@ -17,7 +17,7 @@ data class UserStatus(
     val id: Int = 1,
     val gold: Long = 0,               // 보유 골드
     val currentCombo: Int = 0,        // 연속 성공 일수
-    val lastLoginTime: Long = 0,      // 마지막 접속 시간 (Timestamp)
-    val penaltyType: PenaltyType = PenaltyType.NONE
-    // 아이템 목록은 추후 별도 테이블이나 Map으로 관리 예정
+    val lastLoginTime: Long = 0,
+    val penaltyType: PenaltyType = PenaltyType.NONE,
+    val lastSailedDate: String? = null // 마지막 출항(정산) 날짜 (yyyy-MM-dd)
 )

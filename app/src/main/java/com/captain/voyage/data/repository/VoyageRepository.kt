@@ -327,6 +327,12 @@ class VoyageRepository(
         saveShip(updatedShip)
     }
 
+    suspend fun hasBriefedToday(): Boolean {
+        val today = LocalDate.now().toString()
+        val log = dailyLogDao.getLogDirect(today)
+        return log != null
+    }
+
     suspend fun checkYesterdaySuccess(): Boolean {
         val yesterday = LocalDate.now().minusDays(1).toString()
         val dailyLog = dailyLogDao.getLogDirect(yesterday)
@@ -348,56 +354,90 @@ class VoyageRepository(
         return DailyBriefing(yesterdayScore, targetScore, isSuccess, moveDistance)
     }
 
-    suspend fun settleDailySailing(isSuccess: Boolean): String {
+    // [Changed] 이름 변경: settleDailySailing -> confirmDailyBriefing
+    // 이제 이 함수는 배를 이동시키지 않고, '운항 가능 거리(remainingDistance)'만 충전합니다.
+    suspend fun confirmDailyBriefing(isSuccess: Boolean): String {
         val currentShip = voyageDao.getShip().first() ?: return "선박 정보 없음"
         
-        // 1. 식량 체크 및 소모
+        // 1. 하루치 유지비(식량) 소모 (정박 중에도 밥은 먹으니까)
         val dailyCost = GameConstants.SUPPLY_CONSUMPTION_DAILY
         if (currentShip.supplies < dailyCost) {
-            val driftShip = currentShip.copy(status = ShipStatus.ANCHORED) // 혹은 DOOMED
+            val driftShip = currentShip.copy(status = ShipStatus.ANCHORED)
             saveShip(driftShip)
-            return "⚠️ 식량이 부족하여 배가 표류했습니다! (이동 거리: 0km)"
+            return "⚠️ 식량이 부족하여 배가 표류했습니다! (충전 실패)"
         }
-        
-        // 식량 차감
         val suppliesAfterCost = currentShip.supplies - dailyCost
+
+        // 2. 이동 거리(연료) 충전
+        val rechargeAmount = if (isSuccess) GameConstants.DAILY_MOVE_SUCCESS else GameConstants.DAILY_MOVE_FAIL
         
-        val moveDistance = if (isSuccess) GameConstants.DAILY_MOVE_SUCCESS else GameConstants.DAILY_MOVE_FAIL
+        // 기존 잔여량은 초기화(하루 단위 갱신)하거나 더해줄 수 있음. 여기서는 "오늘의 에너지"로 교체(Replace)
+        val newRemainingDistance = rechargeAmount
+
+        val updatedShip = currentShip.copy(
+            supplies = suppliesAfterCost,
+            remainingDistance = newRemainingDistance
+        )
+        saveShip(updatedShip)
         
-        if (currentShip.destX == null || currentShip.destY == null) {
-            // 목적지가 없어도 식량은 소모됨 (바다 위에 떠있으므로)
-            saveShip(currentShip.copy(supplies = suppliesAfterCost))
-            return "목적지 없음 (X:${currentShip.destX}, Y:${currentShip.destY})"
+        return if (isSuccess) "⚡ 추진력 충전 완료! (+$rechargeAmount km)" else "☁️ 추진력 충전 완료 (+$rechargeAmount km)"
+    }
+
+    // [New] 실제 이동 로직 (남은 거리를 소모하여 이동)
+    suspend fun moveShipTowardDestination(): String {
+        val currentShip = voyageDao.getShip().first() ?: return "선박 정보 없음"
+
+        // 이동 가능 거리 체크
+        val maxDist = currentShip.remainingDistance
+        if (maxDist <= 0.0) {
+            return "오늘 이동 가능한 거리를 모두 소모했습니다. (내일 다시 충전하세요)"
         }
 
+        if (currentShip.destX == null || currentShip.destY == null) {
+            return "목적지가 설정되지 않았습니다."
+        }
+
+        // 목적지까지 거리 계산
         val dx = currentShip.destX - currentShip.posX
         val dy = currentShip.destY - currentShip.posY
-        val totalDistance = sqrt(dx * dx + dy * dy)
-        
-        if (totalDistance < GameConstants.ARRIVAL_THRESHOLD) {
-             saveShip(currentShip.copy(supplies = suppliesAfterCost))
-             return "이미 목적지에 있습니다. (거리: $totalDistance)"
+        val totalDistToDest = sqrt(dx * dx + dy * dy)
+
+        if (totalDistToDest < GameConstants.ARRIVAL_THRESHOLD) {
+             return "이미 목적지에 도착해 있습니다."
         }
+
+        // 실제 이동 거리 결정 (남은 연료 vs 목적지 거리 중 작은 것)
+        val actualMoveDist = if (totalDistToDest <= maxDist) totalDistToDest else maxDist
         
-        var newX = currentShip.posX
-        var newY = currentShip.posY
-        var newDestX = currentShip.destX
-        var newDestY = currentShip.destY
-        var newStatus = currentShip.status
+        // 좌표 계산
+        var newX: Double
+        var newY: Double
+        var newDestX: Double? = currentShip.destX
+        var newDestY: Double? = currentShip.destY
+        var newStatus = ShipStatus.SAILING
         var message = ""
 
-        if (totalDistance <= moveDistance) {
+        if (totalDistToDest <= maxDist) {
+            // 목적지 도착 가능
             newX = currentShip.destX
             newY = currentShip.destY
             newDestX = null
             newDestY = null
-            newStatus = ShipStatus.ANCHORED
-            message = "목적지 도착 완료! (이동: ${totalDistance.toInt()}km)"
+            newStatus = ShipStatus.ANCHORED // 도착했으므로 정박
+            message = "⚓ 목적지 도착 완료! (이동: ${actualMoveDist.toInt()}km)"
         } else {
-            newX = currentShip.posX + (dx / totalDistance) * moveDistance
-            newY = currentShip.posY + (dy / totalDistance) * moveDistance
-            message = "항해 중... ${moveDistance.toInt()}km 전진! (남은 거리: ${(totalDistance - moveDistance).toInt()}km)"
+            // 가다가 멈춤 (연료 소진)
+            newX = currentShip.posX + (dx / totalDistToDest) * actualMoveDist
+            newY = currentShip.posY + (dy / totalDistToDest) * actualMoveDist
+            newStatus = ShipStatus.ANCHORED // 연료 다 써서 멈춤
+            message = "🌊 순항 중... 오늘의 운항 종료. (이동: ${actualMoveDist.toInt()}km, 남은 거리: ${(totalDistToDest - actualMoveDist).toInt()}km)"
         }
+        
+        // 잔여 거리 차감
+        val newRemainingDist = maxDist - actualMoveDist
+        
+        // [Optional] 이동 중 식량 추가 소모? (일단 점호 때 깠으니 여기선 패스, 혹은 이동 거리 비례 소모 가능)
+        // 여기서는 무료로 이동 (이미 점호 때 냄)
 
         val updatedShip = currentShip.copy(
             posX = newX,
@@ -405,9 +445,10 @@ class VoyageRepository(
             destX = newDestX,
             destY = newDestY,
             status = newStatus,
-            supplies = suppliesAfterCost // [Changed] 소모된 식량 적용
+            remainingDistance = newRemainingDist
         )
         saveShip(updatedShip)
+        
         return message
     }
 
@@ -519,5 +560,20 @@ class VoyageRepository(
         }
         
         return "Success"
+    }
+
+    // [Cheat] 오늘 하루 초기화 (다시 점호 받기 위함)
+    suspend fun resetDailyStatus(): String {
+        val today = LocalDate.now().toString()
+        dailyLogDao.deleteLogByDate(today)
+        
+        val currentShip = voyageDao.getShip().first() ?: return "Ship not found"
+        val resetShip = currentShip.copy(
+            remainingDistance = 0.0,
+            supplies = currentShip.maxSupplies // 식량도 가득!
+        )
+        saveShip(resetShip)
+        
+        return "🔄 오늘 하루가 리셋되었습니다! (점호 가능, 식량 충전)"
     }
 }

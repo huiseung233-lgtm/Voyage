@@ -201,6 +201,7 @@ fun GameScreen(
                 val supplyColor = if (supplyRatio < 0.2f) Color(0xFFD32F2F) else Color(0xFF388E3C)
 
                 Card(
+                    modifier = Modifier.clickable { viewModel.resetDailyCheat() }, // [Cheat] 클릭 시 하루 초기화 & 식량 충전
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFE0F7FA)),
                     elevation = CardDefaults.cardElevation(4.dp)
