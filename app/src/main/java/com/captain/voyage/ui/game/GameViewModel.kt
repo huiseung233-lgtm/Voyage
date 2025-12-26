@@ -107,8 +107,6 @@ class GameViewModel @Inject constructor(
                         repository.startVoyage()
                     }
                 }
-                // [Cheat] 돈 만땅 주기
-                giveMeGold()
             } catch (e: Exception) {
                 e.printStackTrace()
                 _toastMessage.postValue("데이터 로드 중 오류 발생: ${e.message}")
@@ -258,41 +256,6 @@ class GameViewModel @Inject constructor(
 
     fun dismissBriefing() {
         _showBriefing.value = false
-    }
-
-    fun resetDailyCheat() {
-        viewModelScope.launch {
-            val msg = repository.resetDailyStatus()
-            _toastMessage.postValue(msg)
-        }
-    }
-
-    fun refillSupplies() {
-        viewModelScope.launch {
-            val currentShip = repository.ship.first() ?: return@launch
-            val refilledShip = currentShip.copy(supplies = currentShip.maxSupplies)
-            repository.saveShip(refilledShip)
-            _toastMessage.postValue("🍞 식량을 가득 채웠습니다! (치트)")
-        }
-    }
-
-    fun giveMeGold() {
-        viewModelScope.launch {
-            val status = repository.userStatus.first()
-            val newStatus = if (status == null) {
-                com.captain.voyage.data.model.UserStatus(
-                    id = 1,
-                    gold = 1000000L,
-                    currentCombo = 0,
-                    lastLoginTime = System.currentTimeMillis(),
-                    penaltyType = com.captain.voyage.data.model.PenaltyType.NONE
-                )
-            } else {
-                status.copy(gold = 1000000L)
-            }
-            repository.saveUserStatus(newStatus)
-            _toastMessage.postValue("💰 1,000,000 골드를 획득했습니다! (치트)")
-        }
     }
 
     // --- 정착지 (Settlement) ---

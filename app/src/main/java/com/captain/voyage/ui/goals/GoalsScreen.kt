@@ -69,6 +69,8 @@ import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.model.Port
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.ui.game.WorldMapView
+import com.captain.voyage.ui.game.MapActivity
+import android.content.Intent
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -78,8 +80,8 @@ fun GoalsScreen(
 ) {
     val goalsUiState by viewModel.goalsUiState.collectAsState()
     val allRules by viewModel.allRules.collectAsState()
-
-    var showBigMap by remember { mutableStateOf(false) }
+    
+    val context = LocalContext.current
     
     // Dialog States
     var showSimpleDialog by remember { mutableStateOf(false) }
@@ -99,7 +101,9 @@ fun GoalsScreen(
                 .fillMaxWidth()
                 .fillMaxHeight(0.4f)
                 .background(Color(0xFF4E342E)) // Dark Wood Color (Desk)
-                .clickable { showBigMap = true }
+                .clickable { 
+                    context.startActivity(Intent(context, MapActivity::class.java))
+                }
                 .clipToBounds(),
             contentAlignment = Alignment.Center
         ) {
@@ -244,18 +248,6 @@ fun GoalsScreen(
 
     // --- Dialogs ---
 
-    if (showBigMap) {
-        val ports by viewModel.allPorts.collectAsState()
-        val ship by viewModel.ship.collectAsState()
-        
-        BigMapDialog(
-            ports = ports,
-            ship = ship,
-            onDismiss = { showBigMap = false },
-            onMapClick = { x, y -> viewModel.setDestination(x, y) }
-        )
-    }
-
     if (showSimpleDialog) {
         SimpleGoalDialog(
             type = editingType,
@@ -353,44 +345,6 @@ fun GoalItemCard(
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF5D4037)
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun BigMapDialog(
-    ports: List<Port>,
-    ship: Ship?,
-    onDismiss: () -> Unit,
-    onMapClick: (Float, Float) -> Unit // Added
-) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-        ) {
-            // 실제 지도 렌더링 (배경 애니메이션 제거됨)
-            WorldMapView(
-                modifier = Modifier.fillMaxSize(),
-                ports = ports,
-                ship = ship,
-                onMapClick = onMapClick // 전달
-            )
-
-            // 닫기 버튼
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .background(Color(0x80000000), CircleShape)
-            ) {
-                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
             }
         }
     }

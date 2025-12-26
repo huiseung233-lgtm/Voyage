@@ -1,5 +1,6 @@
 package com.captain.voyage.ui.game
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -32,6 +33,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -151,8 +155,6 @@ fun GameScreen(
             Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
                 // Gold HUD
                 Card(
-                    modifier = Modifier
-                        .clickable { viewModel.giveMeGold() }, // [Cheat] 클릭 시 골드 획득
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFD7CCC8)),
                     elevation = CardDefaults.cardElevation(8.dp)
@@ -201,7 +203,6 @@ fun GameScreen(
                 val supplyColor = if (supplyRatio < 0.2f) Color(0xFFD32F2F) else Color(0xFF388E3C)
 
                 Card(
-                    modifier = Modifier.clickable { viewModel.resetDailyCheat() }, // [Cheat] 클릭 시 하루 초기화 & 식량 충전
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFE0F7FA)),
                     elevation = CardDefaults.cardElevation(4.dp)
@@ -246,6 +247,21 @@ fun GameScreen(
                 contentAlignment = Alignment.Center
             ) {
                  Text("🎒", fontSize = 32.sp)
+            }
+
+            // [New] 지도 버튼 (인벤토리 버튼 위)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 220.dp, end = 24.dp)
+                    .size(64.dp)
+                    .background(Color(0xFF5D4037), CircleShape)
+                    .clickable { 
+                        context.startActivity(Intent(context, MapActivity::class.java))
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                 Text("🗺️", fontSize = 32.sp)
             }
             
             val supplies = ship?.supplies ?: 0.0

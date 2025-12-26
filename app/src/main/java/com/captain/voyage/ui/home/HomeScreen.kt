@@ -109,7 +109,7 @@ fun HomeScreen(
     val infiniteTransition = rememberInfiniteTransition(label = "bobbing")
     val bobbingOffset by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 10f, 
+        targetValue = 30f, 
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
@@ -196,7 +196,7 @@ fun HomeScreen(
 
                                             .fillMaxWidth()
 
-                                            .offset(y = 17.dp)
+                                            .offset(y = 27.dp)
 
                                             .padding(vertical = 24.dp, horizontal = 2.dp), // Removed shadow
 
@@ -276,7 +276,7 @@ fun HomeScreen(
 
                                                 color = Color(0xFF3E2723),
 
-                                                modifier = Modifier.offset(y = 15.dp).padding(bottom = 4.dp)
+                                                modifier = Modifier.offset(y = 5.dp).padding(bottom = 4.dp)
 
                                             )
 
@@ -300,7 +300,7 @@ fun HomeScreen(
 
                                                     .height(180.dp)
 
-                                                    .offset(y = 19.dp), // Increased spacing by 4dp
+                                                    .offset(y = 9.dp), // Increased spacing by 4dp
 
                                                 userScrollEnabled = false
 

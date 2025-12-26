@@ -2,8 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- [New] 알림 및 정확한 알람을 위한 권한 -->
+    <!-- [권한 설정] 앱이 시스템 기능을 사용하기 위해 필요한 허가 목록 -->
+    <!-- POST_NOTIFICATIONS: 안드로이드 13(API 33) 이상에서 알림을 띄우기 위해 필요 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- SCHEDULE_EXACT_ALARM: 아침 점호 등 정확한 시간에 알람을 울리기 위해 필요 -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
@@ -13,12 +15,12 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Voyage">
 
-        <!-- 1. 메인 액티비티 -->
+        <!-- [1. 메인 화면] 앱 아이콘 클릭 시 가장 먼저 실행되는 진입점 -->
         <activity
             android:name=".ui.main.MainActivity"
             android:exported="true">
@@ -28,7 +30,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 2. 게임 액티비티 (세로 모드 고정 - 테스트용) -->
+        <!-- [2. 게임 화면] 실제 항해 및 인게임 조작 화면 -->
         <activity
             android:name=".ui.game.GameActivity"
             android:exported="false"
@@ -36,10 +38,16 @@
             tools:ignore="LockedOrientationActivity"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
 
-        <!-- 3. [New] 알림 리시버 등록 -->
+        <!-- [3. 지도 화면] 전체 월드맵 및 목적지 설정 화면 -->
+        <activity
+            android:name=".ui.game.MapActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+
+        <!-- [4. 알림 리시버] 정해진 시간에 시스템 신호를 받아 알람/알림을 처리 -->
         <receiver
             android:name=".utils.AlarmReceiver"
-            android:exported="false"> <!-- 앱 내부에서만 호출하므로 false -->
+            android:exported="false"> 
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
