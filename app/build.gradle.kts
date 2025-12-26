@@ -23,6 +23,7 @@ android {
     buildFeatures {
         viewBinding = true
         compose = true
+        buildConfig = true
     }
 
     buildTypes {
@@ -78,6 +79,8 @@ dependencies {
     kapt("androidx.room:room-compiler:$room_version")
 
     implementation("com.google.code.gson:gson:2.10.1")
+    // Logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
     // -----------------------------------------------
     implementation("androidx.fragment:fragment-ktx:1.8.1")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.2")

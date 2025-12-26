@@ -1,4 +1,4 @@
-# ✅ Tasks Checklist
+dz # ✅ Tasks Checklist
 
 > **Rule:** 모든 작업은 위에서부터 순서대로 진행하며, 한 번에 하나의 체크박스만 처리한다.
 
@@ -6,9 +6,9 @@
 앱의 구조를 완전히 이해하고, 기술적 부채를 청산하는 단계.
 
 ### 1.1. Foundation Analysis
-- [ ] [Learn] Manifest & Application (`AndroidManifest.xml`, `VoyageApplication.kt`) 분석 및 주석 정리
-- [ ] [Learn] Dependency Injection (`AppModule.kt`) 구조 파악
-- [ ] [Learn] Navigation (`MainActivity.kt`) 흐름 파악
+- [x] [Learn] Manifest & Application (`AndroidManifest.xml`, `VoyageApplication.kt`) 분석 및 주석 정리
+- [x] [Learn] Dependency Injection (`AppModule.kt`) 구조 파악
+- [x] [Learn] Navigation (`MainActivity.kt`) 흐름 파악
 
 ### 1.2. Data Layer Analysis
 - [ ] [Learn] Data Models (`data/model/`) 구조 분석

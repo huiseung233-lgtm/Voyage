@@ -1,14 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 
+    [1단계: 전체 선언]
+    manifest: 이 파일이 안드로이드 앱의 설정 파일임을 알리는 가장 바깥쪽 테두리입니다.
+    xmlns:android: "이 파일에서 사용하는 'android'라는 단어들은 구글이 정한 규칙을 따르겠다"는 선언입니다.
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- [권한 설정] 앱이 시스템 기능을 사용하기 위해 필요한 허가 목록 -->
-    <!-- POST_NOTIFICATIONS: 안드로이드 13(API 33) 이상에서 알림을 띄우기 위해 필요 -->
+    <!-- 
+        [2단계: 권한 요청 (Permission)]
+        앱이 사용자의 핸드폰 기능을 몰래 쓰면 안 되기 때문에, 여기서 미리 "저 이거 쓸게요!"라고 허락을 구해야 합니다.
+    -->
+
+    <!-- POST_NOTIFICATIONS: 안드로이드 13 버전부터는 앱이 알림(Notification)을 띄우려면 반드시 사용자의 허락을 받아야 합니다. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- SCHEDULE_EXACT_ALARM: 아침 점호 등 정확한 시간에 알람을 울리기 위해 필요 -->
+
+    <!-- SCHEDULE_EXACT_ALARM: "정확한 시간"에 알람을 울리게 하는 권한입니다. 우리 앱의 핵심인 '아침 점호' 기능을 위해 필수입니다. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    
+    <!-- USE_EXACT_ALARM: 위와 세트로 쓰이며, 정확한 알람을 실행할 수 있는 권한을 얻습니다. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
+    <!-- 
+        [3단계: 애플리케이션 설정 (Application)]
+        앱의 전반적인 아이덴티티(이름, 아이콘, 테마 등)를 설정하는 곳입니다.
+    -->
     <application
         android:name=".VoyageApplication"
         android:allowBackup="true"
@@ -20,34 +36,58 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Voyage">
 
-        <!-- [1. 메인 화면] 앱 아이콘 클릭 시 가장 먼저 실행되는 진입점 -->
+        <!-- 
+            [참고: application 태그 안의 주요 설정들]
+            - android:name: 앱이 켜질 때 가장 먼저 실행될 '대장 클래스'입니다.
+            - android:label: 앱의 이름입니다. build.gradle.kts에서 설정된 값(${appLabel})을 가져옵니다.
+            - android:icon: 폰 바탕화면에 보일 앱 아이콘입니다.
+        -->
+
+        <!-- 
+            [4단계: 화면 등록 (Activity)]
+            앱에 존재하는 모든 '화면'은 반드시 여기에 등록해야 합니다. 등록 안 하면 화면이 안 떠요!
+        -->
+
+        <!-- 1. 메인 화면: 앱 아이콘을 눌렀을 때 가장 먼저 뜨는 화면입니다. -->
         <activity
             android:name=".ui.main.MainActivity"
             android:exported="true">
+            <!-- 
+                exported="true": 시스템(폰)이 이 화면을 직접 열 수 있게 허용한다는 뜻입니다.
+                intent-filter: 이 화면이 "앱의 시작점"임을 정의합니다.
+            -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- [2. 게임 화면] 실제 항해 및 인게임 조작 화면 -->
+        <!-- 2. 게임 화면: 실제 배를 조종하고 항해하는 화면입니다. -->
         <activity
             android:name=".ui.game.GameActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            tools:ignore="LockedOrientationActivity"
-            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+            tools:ignore="LockedOrientationActivity" />
+        <!-- 
+            screenOrientation="portrait": 화면을 세로로 고정합니다.
+        -->
 
-        <!-- [3. 지도 화면] 전체 월드맵 및 목적지 설정 화면 -->
+        <!-- 3. 지도 화면: 세계 지도를 보고 목적지를 정하는 화면입니다. -->
         <activity
             android:name=".ui.game.MapActivity"
-            android:exported="false"
-            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+            android:exported="false" />
 
-        <!-- [4. 알림 리시버] 정해진 시간에 시스템 신호를 받아 알람/알림을 처리 -->
+        <!-- 
+            [5단계: 방송 수신기 (Receiver)]
+            화면은 없지만, 시스템이 보내는 '신호'를 기다렸다가 가로채는 역할을 합니다.
+        -->
         <receiver
             android:name=".utils.AlarmReceiver"
             android:exported="false"> 
+            <!-- 
+                AlarmReceiver: 알람 시간이 되면 깨어나서 알림을 띄워줍니다.
+                BOOT_COMPLETED: 폰을 껐다 켰을 때도 알람 설정을 복구하기 위해 신호를 받습니다.
+            -->
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>

@@ -2,6 +2,8 @@ package com.captain.voyage
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
+import com.captain.voyage.BuildConfig
 
 /**
  * VoyageApplication: 앱의 전역 상태를 관리하는 커스텀 Application 클래스입니다.
@@ -15,6 +17,12 @@ import dagger.hilt.android.HiltAndroidApp
 class VoyageApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        // 앱 전체에서 공통적으로 필요한 초기화 로직(로그 설정, 분석 도구 등)을 여기에 배치합니다.
+        
+        // [항해 기록 장치 설치]
+        // 개발 중(Debug)일 때만 로그를 기록하도록 설정합니다.
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+            Timber.d("⚓ Voyage 항해 기록 장치가 가동되었습니다! 로그캣에서 저를 찾아보세요.")
+        }
     }
 }
