@@ -86,6 +86,42 @@ class GameViewModel @Inject constructor(
     private val _inventoryItems = MutableStateFlow<List<InventoryItemUi>>(emptyList())
     val inventoryItems: StateFlow<List<InventoryItemUi>> = _inventoryItems.asStateFlow()
 
+    // [New] 로그북 데이터 지원
+    val allRules = repository.allRules.asLiveData()
+
+    // [New] 직접 데이터 조회 (로그북용)
+    suspend fun getRecordsDirect(date: String): List<com.captain.voyage.data.model.ScoreRecord> {
+        return repository.getScoreRecordsByDate(date).first()
+    }
+
+    // [New] 일괄 저장 및 정박 연계
+    fun saveBatchRecords(date: String, records: List<com.captain.voyage.data.model.ScoreRecord>) {
+        viewModelScope.launch {
+            // 1. 기존 삭제
+            val oldRecords = repository.getScoreRecordsByDate(date).first()
+            oldRecords.forEach { repository.deleteScoreRecord(it) }
+
+            // 2. 신규 저장
+            var totalScore = 0
+            records.forEach { 
+                repository.insertScoreRecord(it)
+                totalScore += it.score
+            }
+
+            // 3. 로그 업데이트
+            val log = com.captain.voyage.data.model.DailyLog(date = date, totalScore = totalScore)
+            repository.updateDailyLog(log)
+
+            // 4. 정박 프로세스 중이면 정박 실행
+            if (repository.isDockingProcess) {
+                repository.dockShip()
+                _toastMessage.value = "⚓ 일지 작성 및 정박 완료!"
+            } else {
+                _toastMessage.value = "일지가 저장되었습니다."
+            }
+        }
+    }
+
     // [New] 로그북 열기 신호 (Activity에서 관찰하여 처리)
     private val _navigateToLogbook = MutableLiveData<Boolean>()
     val navigateToLogbook: LiveData<Boolean> get() = _navigateToLogbook

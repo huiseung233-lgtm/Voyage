@@ -56,6 +56,10 @@ import com.captain.voyage.ui.animation.SailingScene
 import com.captain.voyage.ui.animation.ViewMode
 import kotlin.math.atan2
 
+import com.captain.voyage.ui.home.CommonLogbookDialog // Import 추가
+import com.captain.voyage.data.model.ScoreRecord // Import 추가
+import java.time.LocalDate // Import 추가
+
 @Composable
 fun GameScreen(
     viewModel: GameViewModel,
@@ -81,8 +85,13 @@ fun GameScreen(
     
     val allPorts by viewModel.allPorts.collectAsState()
     
-    // [New] 정박 전 확인 다이얼로그 상태
+    // [New] 정박 전 확인 및 로그북 상태
     var showDockConfirmation by remember { mutableStateOf(false) }
+    var showLogbookDialog by remember { mutableStateOf(false) }
+    
+    // [New] 로그북 데이터 로딩 상태
+    var logbookInitialRecords by remember { mutableStateOf<List<ScoreRecord>?>(null) }
+    val rules by viewModel.allRules.observeAsState(emptyList())
     
     val context = LocalContext.current
 
@@ -334,7 +343,8 @@ fun GameScreen(
                     Button(
                         onClick = {
                             showDockConfirmation = false
-                            viewModel.openLogbookForDocking() // 일지 작성 후 정박
+                            viewModel.openLogbookForDocking() // 정박 프로세스 시작
+                            showLogbookDialog = true // 로그북 팝업 열기
                         }
                     ) {
                         Text("예, 작성할게요")
@@ -352,6 +362,36 @@ fun GameScreen(
                 },
                 containerColor = Color(0xFFFFF8E1)
             )
+        }
+        
+        // [New] 게임 내 로그북 팝업 (CommonLogbookDialog 재사용)
+        if (showLogbookDialog) {
+            val todayDate = LocalDate.now().toString()
+            
+            // 데이터 로딩 (한 번만 실행)
+            LaunchedEffect(Unit) {
+                logbookInitialRecords = viewModel.getRecordsDirect(todayDate)
+            }
+
+            if (logbookInitialRecords != null) {
+                CommonLogbookDialog(
+                    date = todayDate,
+                    initialRecords = logbookInitialRecords!!,
+                    rules = rules,
+                    onDismiss = { showLogbookDialog = false },
+                    onSave = { records ->
+                        viewModel.saveBatchRecords(todayDate, records)
+                        showLogbookDialog = false
+                    }
+                )
+            } else {
+                // 로딩 중 표시
+                androidx.compose.ui.window.Dialog(onDismissRequest = { showLogbookDialog = false }) {
+                     Box(modifier = Modifier.size(100.dp).background(Color.White, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                         CircularProgressIndicator(color = Color(0xFF3E2723))
+                     }
+                }
+            }
         }
 
         // [New] 아침 점호 다이얼로그
