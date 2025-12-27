@@ -9,6 +9,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import dagger.hilt.android.AndroidEntryPoint
 
+import android.content.Intent // Import 추가
+
 @AndroidEntryPoint
 class GameActivity : AppCompatActivity() {
 
@@ -19,6 +21,17 @@ class GameActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         
         setupFullScreen() // 1. 전체 화면 설정
+
+        // [New] 로그북 열기 신호 관찰
+        viewModel.navigateToLogbook.observe(this) { shouldNavigate ->
+            if (shouldNavigate) {
+                val resultIntent = Intent().apply {
+                    putExtra("OPEN_LOGBOOK_AND_DOCK", true) // 정박 연계 신호
+                }
+                setResult(RESULT_OK, resultIntent)
+                finish() // 게임 화면 종료 -> 메인으로 복귀
+            }
+        }
 
         setContent {
             GameScreen(

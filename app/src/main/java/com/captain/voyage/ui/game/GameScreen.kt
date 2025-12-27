@@ -29,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton // Import 추가
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -80,6 +81,9 @@ fun GameScreen(
     
     val allPorts by viewModel.allPorts.collectAsState()
     
+    // [New] 정박 전 확인 다이얼로그 상태
+    var showDockConfirmation by remember { mutableStateOf(false) }
+    
     val context = LocalContext.current
 
     // Toast Message Handling
@@ -124,6 +128,8 @@ fun GameScreen(
                 .fillMaxSize()
                 .background(Color.Black) // 기본 배경
         ) {
+            // ... (기존 배경 및 HUD 코드 생략 - 변경 없음)
+            
             // 0. Sailing Animation Scene (Background)
             val rotation = ship?.let {
                 if (it.destX != null && it.destY != null) {
@@ -133,15 +139,14 @@ fun GameScreen(
                 } else 0f
             } ?: 0f
 
-            // [Fixed] 당직 교대 로직: 항해가 아니더라도 항구가 없는 바다 위라면 움직이는 애니메이션 유지
             val isVisuallyMoving = isSailing || !isAtPort
 
             SailingScene(
                 modifier = Modifier.fillMaxSize(),
-                viewMode = ViewMode.ISOMETRIC, // 입체 뷰
+                viewMode = ViewMode.ISOMETRIC, 
                 shipRotation = rotation,
                 isMoving = isVisuallyMoving,
-                isAtPort = isAtPort && !isSailing // 정박 중이고 항구 근처일 때만 부두 표시
+                isAtPort = isAtPort && !isSailing 
             )
 
             // Overlay for status color
@@ -235,8 +240,6 @@ fun GameScreen(
             }
 
             // 3. Shop & Settlement & Inventory Buttons
-            
-            // 인벤토리 버튼 (항상 표시 - 우측 하단, 액션 버튼 위)
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -249,7 +252,6 @@ fun GameScreen(
                  Text("🎒", fontSize = 32.sp)
             }
 
-            // [New] 지도 버튼 (인벤토리 버튼 위)
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -266,7 +268,6 @@ fun GameScreen(
             
             val supplies = ship?.supplies ?: 0.0
             if (!isSailing && (isAtPort || supplies <= 0.0)) {
-                // 상점 버튼 (중앙 우측)
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -280,7 +281,6 @@ fun GameScreen(
                     )
                 }
 
-                // 정착지 버튼 (중앙 좌측) - 신대륙(본토)에서만 가능
                 if (currentPort?.canEstablishSettlement == true) {
                     Box(
                         modifier = Modifier
@@ -299,7 +299,14 @@ fun GameScreen(
 
             // 4. Action Button (Bottom)
             Button(
-                onClick = { viewModel.toggleShipStatus() },
+                onClick = { 
+                    if (isSailing) {
+                        // 정박 시 확인 다이얼로그 띄우기
+                        showDockConfirmation = true
+                    } else {
+                        viewModel.toggleShipStatus() // 출항은 바로 진행
+                    }
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
@@ -317,6 +324,36 @@ fun GameScreen(
             }
         }
 
+        // [New] 정박 확인 다이얼로그
+        if (showDockConfirmation) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showDockConfirmation = false },
+                title = { Text("⚓ 정박 준비") },
+                text = { Text("정박하기 전에 오늘의 마지막 일지를 작성하시겠습니까?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDockConfirmation = false
+                            viewModel.openLogbookForDocking() // 일지 작성 후 정박
+                        }
+                    ) {
+                        Text("예, 작성할게요")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showDockConfirmation = false
+                            viewModel.confirmDocking() // 바로 정박
+                        }
+                    ) {
+                        Text("아니요, 바로 정박", color = Color.Gray)
+                    }
+                },
+                containerColor = Color(0xFFFFF8E1)
+            )
+        }
+
         // [New] 아침 점호 다이얼로그
         if (showBriefing && briefingData != null) {
             DailyBriefingDialog(
@@ -327,6 +364,8 @@ fun GameScreen(
                 onDismiss = { viewModel.dismissBriefing() }
             )
         }
+        
+        // ... (나머지 다이얼로그 유지)
         
         // [New] 인벤토리 다이얼로그
         if (showInventoryDialog) {

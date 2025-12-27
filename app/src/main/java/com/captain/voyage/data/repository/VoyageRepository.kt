@@ -60,6 +60,18 @@ class VoyageRepository(
     // 항해 루프 제어용 Job
     private var sailingJob: Job? = null
 
+    // [New] 정박 프로세스 상태 (Game -> Home 이동 시 유지)
+    var isDockingProcess = false
+
+    // [New] 정박 처리 함수 (ViewModel에서 Repository로 이동)
+    suspend fun dockShip() {
+        stopVoyage()
+        val currentShip = voyageDao.getShip().first() ?: return
+        val updatedShip = currentShip.copy(status = ShipStatus.ANCHORED)
+        saveShip(updatedShip)
+        isDockingProcess = false // 프로세스 종료
+    }
+
     // ----------------------------------------------------------------
     // 1. 규칙(Rules) 관련 업무
     // ----------------------------------------------------------------

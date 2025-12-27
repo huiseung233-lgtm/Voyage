@@ -56,6 +56,13 @@ class HomeViewModel @Inject constructor(
         val displayFormat = SimpleDateFormat("MM/dd (E)", Locale.getDefault())
         _displayDate.value = displayFormat.format(Date())
     }
+    
+    // [New] 화면 진입 시 정박 프로세스 체크 (GameActivity에서 돌아왔을 때)
+    fun checkDockingProcess() {
+        if (repository.isDockingProcess) {
+            triggerLogbookPopup()
+        }
+    }
 
     // 알림 클릭 시 MainActivity에서 호출하는 함수
     fun triggerLogbookPopup() {
@@ -134,8 +141,13 @@ class HomeViewModel @Inject constructor(
             val log = DailyLog(date = targetDate, totalScore = totalScore)
             repository.updateDailyLog(log)
             
-            // [Fix] 화면 강제 새로고침
+            // [Fix] 데이터 갱신 후 화면 강제 새로고침
             _currentMonth.value = _currentMonth.value
+            
+            // [New] 정박 프로세스 중이었다면, 저장 후 정박 실행
+            if (repository.isDockingProcess) {
+                repository.dockShip()
+            }
         }
     }
 

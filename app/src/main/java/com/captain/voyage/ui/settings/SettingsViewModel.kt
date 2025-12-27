@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.captain.voyage.VoyageApplication
+import com.captain.voyage.data.repository.VoyageRepository
 import com.captain.voyage.utils.NotificationHelper
 import com.captain.voyage.utils.TimeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +30,8 @@ data class SettingsState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val repository: VoyageRepository
 ) : ViewModel() {
 
     private val PREF_NAME = "voyage_settings"
@@ -130,6 +132,14 @@ class SettingsViewModel @Inject constructor(
             withContext(Dispatchers.Main) {
                 onComplete()
             }
+        }
+    }
+
+    // [치트] 오늘 하루 리셋 (무한 점호 가능)
+    fun cheatResetDaily(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val msg = repository.resetDailyStatus()
+            onResult(msg)
         }
     }
 }

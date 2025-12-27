@@ -86,6 +86,10 @@ class GameViewModel @Inject constructor(
     private val _inventoryItems = MutableStateFlow<List<InventoryItemUi>>(emptyList())
     val inventoryItems: StateFlow<List<InventoryItemUi>> = _inventoryItems.asStateFlow()
 
+    // [New] 로그북 열기 신호 (Activity에서 관찰하여 처리)
+    private val _navigateToLogbook = MutableLiveData<Boolean>()
+    val navigateToLogbook: LiveData<Boolean> get() = _navigateToLogbook
+
     init {
         viewModelScope.launch {
             try {
@@ -180,20 +184,27 @@ class GameViewModel @Inject constructor(
     fun toggleShipStatus() {
         val currentShip = ship.value ?: return
         if (currentShip.status == ShipStatus.SAILING) {
-            dockShip(currentShip)
+            // dockShip은 이제 confirmDocking에서 호출됨
         } else {
             sailShip(currentShip)
         }
     }
 
-    private fun dockShip(currentShip: Ship) {
+    // [New] 정박 전 로그북 작성 요청
+    fun openLogbookForDocking() {
+        repository.isDockingProcess = true
+        _navigateToLogbook.value = true
+    }
+
+    // [New] 정박 확정 (바로 정박)
+    fun confirmDocking() {
         viewModelScope.launch {
-            repository.stopVoyage()
-            val updatedShip = currentShip.copy(status = ShipStatus.ANCHORED)
-            repository.saveShip(updatedShip)
-            val effectiveDate = TimeManager.getEffectiveDate().toString()
-            _toastMessage.value = "⚓ 정박 완료! (${effectiveDate} 기록 마감)"
+            repository.dockShip()
         }
+    }
+
+    private fun dockShip(currentShip: Ship) {
+        // Removed: Logic moved to Repository
     }
 
     private fun sailShip(currentShip: Ship) {

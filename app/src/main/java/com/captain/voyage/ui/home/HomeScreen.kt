@@ -104,6 +104,7 @@ fun HomeScreen(
     // Init Data
     LaunchedEffect(Unit) {
         viewModel.loadMonthlyLogs(currentYearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")))
+        viewModel.checkDockingProcess() // [New] 정박 프로세스 체크
     }
 
     LaunchedEffect(navigateToLogbook) {
