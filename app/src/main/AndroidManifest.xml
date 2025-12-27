@@ -51,10 +51,11 @@
         <!-- 1. 메인 화면: 앱 아이콘을 눌렀을 때 가장 먼저 뜨는 화면입니다. -->
         <activity
             android:name=".ui.main.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity">
             <!-- 
-                exported="true": 시스템(폰)이 이 화면을 직접 열 수 있게 허용한다는 뜻입니다.
-                intent-filter: 이 화면이 "앱의 시작점"임을 정의합니다.
+                android:screenOrientation="portrait": 모든 하위 탭(홈, 목표 등)을 세로로 고정합니다.
             -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -65,11 +66,9 @@
         <!-- 2. 게임 화면: 실제 배를 조종하고 항해하는 화면입니다. -->
         <activity
             android:name=".ui.game.GameActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            tools:ignore="LockedOrientationActivity" />
+            android:exported="false" />
         <!-- 
-            screenOrientation="portrait": 화면을 세로로 고정합니다.
+            이제 게임 화면은 필요 시 회전이 가능합니다.
         -->
 
         <!-- 3. 지도 화면: 세계 지도를 보고 목적지를 정하는 화면입니다. -->

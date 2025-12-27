@@ -89,6 +89,9 @@ class GameViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             try {
+                // [추가] 항구 데이터 초기화 (초기화 후 섬이 사라지는 문제 해결)
+                repository.initializeDummyPorts()
+
                 val currentShip = repository.ship.first()
                 if (currentShip == null) {
                     val defaultShip = Ship(

@@ -1,5 +1,6 @@
 package com.captain.voyage.ui.home
 
+import android.util.Log // 테스트용 로그 추가
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -12,12 +13,13 @@ import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.repository.VoyageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted // Added
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map // Added
-import kotlinx.coroutines.flow.stateIn // Added
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach // 테스트용 추가
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -47,7 +49,7 @@ class HomeViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100)
 
-    // ★ [New] 알림 클릭 시 로그북 팝업을 띄우기 위한 이벤트 신호
+    // 알림 클릭 시 로그북 팝업을 띄우기 위한 이벤트 신호
     private val _navigateToLogbook = MutableLiveData<Boolean>()
     val navigateToLogbook: LiveData<Boolean> get() = _navigateToLogbook
 
@@ -56,12 +58,12 @@ class HomeViewModel @Inject constructor(
         _displayDate.value = displayFormat.format(Date())
     }
 
-    // ★ [New] 알림 클릭 시 MainActivity에서 호출하는 함수
+    // 알림 클릭 시 MainActivity에서 호출하는 함수
     fun triggerLogbookPopup() {
         _navigateToLogbook.value = true
     }
 
-    // ★ [New] Fragment에서 팝업을 띄운 후 신호를 소모하는 함수
+    // Fragment에서 팝업을 띄운 후 신호를 소모하는 함수
     fun onLogbookPopupOpened() {
         _navigateToLogbook.value = false
     }
@@ -112,7 +114,14 @@ class HomeViewModel @Inject constructor(
         val updatedLog = currentLog.copy(
             totalScore = currentLog.totalScore + deltaScore
         )
+        
+        // [테스트 가설 1] 저장 시점 로그
+        Log.d("VOYAGE_TEST", "💾 DB 저장 시도: 날짜[$targetDate] 기존[${currentLog.totalScore}] -> 최종[${updatedLog.totalScore}]")
+        
         repository.updateDailyLog(updatedLog)
+        
+        // [Fix] 데이터 갱신 후 화면 강제 새로고침
+        _currentMonth.value = _currentMonth.value
     }
 
     // 4. 캘린더용 월간 데이터 로직 (실시간 Flow)
@@ -122,7 +131,13 @@ class HomeViewModel @Inject constructor(
 
     val monthlyLogs: StateFlow<List<DailyLog>> = _currentMonth
         .flatMapLatest { yearMonth ->
-            repository.getMonthlyLogs(yearMonth)
+            // [테스트 가설 2/3] 조회 시점 로그 (와일드카드 % 한 번만 적용)
+            Log.d("VOYAGE_TEST", "🔍 DB 조회 요청: 월[$yearMonth]")
+            repository.getMonthlyLogs("$yearMonth%")
+        }
+        .onEach { logs ->
+            Log.d("VOYAGE_TEST", "✅ DB 조회 완료: 불러온 로그 개수[${logs.size}개]")
+            logs.forEach { Log.d("VOYAGE_TEST", "   - 발견된 데이터: 날짜[${it.date}] 점수[${it.totalScore}]") }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

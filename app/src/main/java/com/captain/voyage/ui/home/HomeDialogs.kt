@@ -4,17 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -30,26 +20,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults // Added
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog // Added
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState // Added
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,7 +65,6 @@ fun CalendarDialog(
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Header (Month Navigation)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -114,7 +86,6 @@ fun CalendarDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Days Grid
                 val calendarDays = remember(currentYearMonth, monthlyLogs) {
                     generateCalendarDays(currentYearMonth, monthlyLogs)
                 }
@@ -123,7 +94,6 @@ fun CalendarDialog(
                     columns = GridCells.Fixed(7),
                     modifier = Modifier.height(300.dp)
                 ) {
-                    // Weekday Headers
                     items(listOf("일", "월", "화", "수", "목", "금", "토")) { day ->
                         Text(
                             text = day,
@@ -132,7 +102,6 @@ fun CalendarDialog(
                             color = Color(0xFF5D4037)
                         )
                     }
-                    // Days
                     items(calendarDays) { day ->
                         CalendarDayItem(day, onDateSelected)
                     }
@@ -184,9 +153,9 @@ fun CalendarDayItem(day: CalendarDayUi, onClick: (String) -> Unit) {
     } else {
         val hasScore = day.score != null
         val scoreColor = when {
-            (day.score ?: 0) >= 80 -> Color(0xFF4CAF50) // Green
-            (day.score ?: 0) >= 50 -> Color(0xFFFF9800) // Orange
-            else -> Color(0xFF9E9E9E) // Grey
+            (day.score ?: 0) >= 80 -> Color(0xFF4CAF50)
+            (day.score ?: 0) >= 50 -> Color(0xFFFF9800)
+            else -> Color(0xFF9E9E9E)
         }
 
         Column(
@@ -210,7 +179,6 @@ fun CalendarDayItem(day: CalendarDayUi, onClick: (String) -> Unit) {
         }
     }
 }
-
 
 // --- Logbook Dialog ---
 
@@ -236,13 +204,12 @@ fun LogbookDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .height(700.dp) // Fixed height for consistency
+                .height(700.dp)
                 .padding(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5DC)),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -259,7 +226,6 @@ fun LogbookDialog(
                     }
                 }
                 
-                // Total Score of Day (Calculate from records to be accurate)
                 val dayScore = records.sumOf { it.score }
                 Text(
                     text = "일일 합계 : ${if (dayScore > 0) "+" else ""}$dayScore P",
@@ -271,7 +237,6 @@ fun LogbookDialog(
 
                 HorizontalDivider(color = Color(0xFF8D6E63))
 
-                // History List (Top Half)
                 Text("기록 내역", modifier = Modifier.padding(top = 8.dp), fontSize = 12.sp, color = Color.Gray)
                 LazyColumn(
                     modifier = Modifier
@@ -287,7 +252,6 @@ fun LogbookDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider(color = Color(0xFF8D6E63))
 
-                // Rules List (Bottom Half)
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -325,10 +289,21 @@ fun LogbookDialog(
                         LogRuleItem(rule) { isSuccess ->
                             val score = if (isSuccess) rule.defaultScore else rule.penalty
                             val suffix = if (isSuccess) "" else " (실패)"
-                            // [수정] rule.id 전달
                             viewModel.addRecord(date, rule.title + suffix, score, ruleId = rule.id)
                         }
                     }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // [추가] 항해 일지 저장 버튼 (로직은 아직 연결하지 않음)
+                Button(
+                    onClick = { /* TODO: 일괄 저장 로직 연결 예정 */ },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("⚓ 항해 일지 저장", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }
@@ -348,9 +323,7 @@ fun LogbookDialog(
 @Composable
 fun LogRecordItem(record: ScoreRecord, onDelete: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -383,7 +356,7 @@ fun LogRuleItem(rule: Rule, onClick: (Boolean) -> Unit) {
                     onClick = { onClick(true) },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                     modifier = Modifier.height(30.dp).width(50.dp).padding(horizontal = 2.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                    contentPadding = PaddingValues(0.dp)
                 ) {
                     Text("O", fontSize = 12.sp)
                 }
@@ -391,7 +364,7 @@ fun LogRuleItem(rule: Rule, onClick: (Boolean) -> Unit) {
                     onClick = { onClick(false) },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
                     modifier = Modifier.height(30.dp).width(50.dp).padding(horizontal = 2.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                    contentPadding = PaddingValues(0.dp)
                 ) {
                     Text("X", fontSize = 12.sp)
                 }

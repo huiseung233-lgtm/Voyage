@@ -102,9 +102,11 @@ object NotificationHelper {
     }
 
     private fun calculateNextAlarmTime(intervalMinutes: Int): Long {
+        // [안전장치] 간격이 0이거나 음수면 계산이 불가능하므로 기본값 60분으로 처리
+        val interval = if (intervalMinutes <= 0) 60 else intervalMinutes
         val calendar = Calendar.getInstance()
         val currentMinute = calendar.get(Calendar.MINUTE)
-        val nextMinute = ((currentMinute / intervalMinutes) + 1) * intervalMinutes
+        val nextMinute = ((currentMinute / interval) + 1) * interval
         if (nextMinute >= 60) {
             calendar.add(Calendar.HOUR_OF_DAY, 1)
             calendar.set(Calendar.MINUTE, nextMinute - 60)
@@ -114,7 +116,7 @@ object NotificationHelper {
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
         if (calendar.timeInMillis <= System.currentTimeMillis()) {
-            calendar.add(Calendar.MINUTE, intervalMinutes)
+            calendar.add(Calendar.MINUTE, interval)
         }
         return calendar.timeInMillis
     }

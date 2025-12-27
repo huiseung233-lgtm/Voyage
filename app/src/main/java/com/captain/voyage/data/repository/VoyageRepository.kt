@@ -379,6 +379,14 @@ class VoyageRepository(
             remainingDistance = newRemainingDistance
         )
         saveShip(updatedShip)
+
+        // [Fix] 오늘 점호 완료 기록(DailyLog) 저장 - 무한 점호 방지
+        val today = LocalDate.now().toString()
+        val todayLog = DailyLog(
+            date = today,
+            totalScore = 0 // 초기 점수는 0 (나중에 업데이트됨)
+        )
+        dailyLogDao.insertOrUpdateLog(todayLog)
         
         return if (isSuccess) "⚡ 추진력 충전 완료! (+$rechargeAmount km)" else "☁️ 추진력 충전 완료 (+$rechargeAmount km)"
     }
@@ -429,7 +437,8 @@ class VoyageRepository(
             // 가다가 멈춤 (연료 소진)
             newX = currentShip.posX + (dx / totalDistToDest) * actualMoveDist
             newY = currentShip.posY + (dy / totalDistToDest) * actualMoveDist
-            newStatus = ShipStatus.ANCHORED // 연료 다 써서 멈춤
+            // [Fix] 바다 위에서는 정박하지 않고 항해 상태 유지 (SAILING)
+            newStatus = ShipStatus.SAILING 
             message = "🌊 순항 중... 오늘의 운항 종료. (이동: ${actualMoveDist.toInt()}km, 남은 거리: ${(totalDistToDest - actualMoveDist).toInt()}km)"
         }
         

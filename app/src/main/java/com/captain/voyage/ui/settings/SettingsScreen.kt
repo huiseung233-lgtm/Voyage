@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -258,6 +259,9 @@ fun NumberInputRow(
     onValueChange: (Int) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
+    // 로컬 상태로 텍스트 관리 (입력 중에는 즉시 반영하지 않음)
+    var textState by remember(value) { mutableStateOf(value.toString()) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -267,18 +271,32 @@ fun NumberInputRow(
             Text(text = desc, fontSize = 12.sp, color = Color(0xFF8D6E63))
         }
         OutlinedTextField(
-            value = value.toString(),
+            value = textState,
             onValueChange = { str ->
                 if (str.all { it.isDigit() }) {
-                    onValueChange(str.toIntOrNull() ?: 0)
+                    textState = str
                 }
             },
-            modifier = Modifier.width(80.dp),
+            modifier = Modifier
+                .width(80.dp)
+                .onFocusChanged { focusState ->
+                    // 포커스를 잃었을 때 (다른 곳 터치 등) 최종 값 반영
+                    if (!focusState.isFocused) {
+                        val newValue = textState.toIntOrNull() ?: value
+                        if (newValue != value) {
+                            onValueChange(newValue)
+                        }
+                        // 만약 비어있다면 원래 값(또는 반영된 값)으로 다시 표시
+                        textState = newValue.toString()
+                    }
+                },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done
             ),
-            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            keyboardActions = KeyboardActions(onDone = { 
+                focusManager.clearFocus() // 포커스를 해제하여 onFocusChanged 트리거
+            }),
             singleLine = true
         )
         Text(

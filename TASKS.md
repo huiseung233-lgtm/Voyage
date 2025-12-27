@@ -24,6 +24,10 @@ dz # ✅ Tasks Checklist
 - [ ] [Refactor] `GameActivity` UI 레이아웃 최적화 (반응형 적용)
 - [ ] [Refactor] 불필요한 중복 코드 제거 (Helper 함수 분리)
 
+> **💡 빌드 경고 분석 메모 (2025-12-27)**
+> 1. **Kapt (기술 부채):** Kotlin 2.0 미지원으로 1.9로 하위 호환 중. 향후 `KSP`로 전환 필요.
+> 2. **Deprecation (상태바):** `statusBarColor`가 구형 방식임. 최신 `WindowInsetsController` 방식으로 교체 시 상태바 가독성 버그 동시 해결 가능.
+
 ---
 
 ## 2. 🏗️ Phase 4: Settlement & Polish (보류)
