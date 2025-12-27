@@ -1,6 +1,5 @@
 package com.captain.voyage.ui.home
 
-import android.util.Log // 테스트용 로그 추가
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -17,8 +16,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first // [필수 추가] 
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach // 테스트용 추가
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -68,8 +67,9 @@ class HomeViewModel @Inject constructor(
         _navigateToLogbook.value = false
     }
 
-    // 날짜 선택 변경 함수
+    // 날짜 선택 변경 함수 (기존 기억을 강제로 지우고 새로 불러오도록 개선)
     fun setSelectedDate(date: String) {
+        _selectedDate.value = "" // 임시로 비워서 switchMap이 새로운 Flow를 구독하게 함
         _selectedDate.value = date
     }
 
@@ -81,6 +81,22 @@ class HomeViewModel @Inject constructor(
     }
 
     val allRules = repository.allRules.asLiveData()
+
+    // [추가] 일회용 데이터 직접 조회 (DB에서 현재 상태를 즉시 가져옴)
+    suspend fun getRecordsDirect(targetDate: String): List<ScoreRecord> {
+        return repository.getScoreRecordsByDate(targetDate).first()
+    }
+
+    // [추가] 해당 날짜의 로그 존재 여부 확인 (출항 여부 체크용)
+    suspend fun isLogExists(targetDate: String): Boolean {
+        return repository.getDailyLogDirect(targetDate) != null
+    }
+
+    // [추가] 현재 선박이 항해 중인지 확인
+    suspend fun isShipSailing(): Boolean {
+        val currentShip = repository.ship.first()
+        return currentShip?.status == com.captain.voyage.data.model.ShipStatus.SAILING
+    }
 
     // 3. 기록 추가/삭제 기능
     // [수정] ruleId 파라미터 추가 (기본값 null)
@@ -100,6 +116,29 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // [추가] 일괄 저장 기능 (임시 장부를 DB에 한꺼번에 기록)
+    fun saveBatchRecords(targetDate: String, newRecords: List<ScoreRecord>) {
+        viewModelScope.launch {
+            // 1. 해당 날짜의 기존 세부 내역을 모두 지웁니다.
+            val oldRecords = repository.getScoreRecordsByDate(targetDate).first()
+            oldRecords.forEach { repository.deleteScoreRecord(it) }
+
+            // 2. 새로운 내역들을 하나씩 저장합니다.
+            var totalScore = 0
+            newRecords.forEach { 
+                repository.insertScoreRecord(it)
+                totalScore += it.score
+            }
+
+            // 3. 일일 합계 점수를 한 번에 업데이트합니다.
+            val log = DailyLog(date = targetDate, totalScore = totalScore)
+            repository.updateDailyLog(log)
+            
+            // [Fix] 화면 강제 새로고침
+            _currentMonth.value = _currentMonth.value
+        }
+    }
+
     fun deleteRecord(record: ScoreRecord) {
         viewModelScope.launch {
             repository.deleteScoreRecord(record)
@@ -115,9 +154,6 @@ class HomeViewModel @Inject constructor(
             totalScore = currentLog.totalScore + deltaScore
         )
         
-        // [테스트 가설 1] 저장 시점 로그
-        Log.d("VOYAGE_TEST", "💾 DB 저장 시도: 날짜[$targetDate] 기존[${currentLog.totalScore}] -> 최종[${updatedLog.totalScore}]")
-        
         repository.updateDailyLog(updatedLog)
         
         // [Fix] 데이터 갱신 후 화면 강제 새로고침
@@ -131,13 +167,7 @@ class HomeViewModel @Inject constructor(
 
     val monthlyLogs: StateFlow<List<DailyLog>> = _currentMonth
         .flatMapLatest { yearMonth ->
-            // [테스트 가설 2/3] 조회 시점 로그 (와일드카드 % 한 번만 적용)
-            Log.d("VOYAGE_TEST", "🔍 DB 조회 요청: 월[$yearMonth]")
             repository.getMonthlyLogs("$yearMonth%")
-        }
-        .onEach { logs ->
-            Log.d("VOYAGE_TEST", "✅ DB 조회 완료: 불러온 로그 개수[${logs.size}개]")
-            logs.forEach { Log.d("VOYAGE_TEST", "   - 발견된 데이터: 날짜[${it.date}] 점수[${it.totalScore}]") }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

@@ -1,6 +1,7 @@
 package com.captain.voyage.ui.home
 
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +38,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.captain.voyage.data.model.DailyLog
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.model.ScoreRecord
+import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -153,9 +156,9 @@ fun CalendarDayItem(day: CalendarDayUi, onClick: (String) -> Unit) {
     } else {
         val hasScore = day.score != null
         val scoreColor = when {
-            (day.score ?: 0) >= 80 -> Color(0xFF4CAF50)
-            (day.score ?: 0) >= 50 -> Color(0xFFFF9800)
-            else -> Color(0xFF9E9E9E)
+            (day.score ?: 0) >= 80 -> Color(0xFF4CAF50) 
+            (day.score ?: 0) >= 50 -> Color(0xFFFF9800) 
+            else -> Color(0xFF9E9E9E) 
         }
 
         Column(
@@ -188,13 +191,23 @@ fun LogbookDialog(
     date: String,
     onDismiss: () -> Unit
 ) {
-    val records by viewModel.selectedDateRecords.observeAsState(emptyList())
+    // 1. 더 이상 LiveData를 실시간 관찰하지 않고 임시 장부만 사용함
     val rules by viewModel.allRules.observeAsState(emptyList())
+    
+    var tempRecords by remember { mutableStateOf<List<ScoreRecord>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    
     var searchQuery by remember { mutableStateOf("") }
     var showAddCustomDialog by remember { mutableStateOf(false) }
+    
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(date) {
-        viewModel.setSelectedDate(date)
+    // [핵심] 창이 열릴 때만 딱 한 번 DB에서 직접 데이터를 퍼옴 (Direct Fetch)
+    LaunchedEffect(Unit) {
+        val freshRecords = viewModel.getRecordsDirect(date)
+        tempRecords = freshRecords
+        isLoading = false
     }
 
     Dialog(
@@ -204,106 +217,134 @@ fun LogbookDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .height(700.dp)
+                .height(700.dp) 
                 .padding(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5DC)),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "📜 $date 항해 일지",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF3E2723)
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF3E2723))
                 }
-                
-                val dayScore = records.sumOf { it.score }
-                Text(
-                    text = "일일 합계 : ${if (dayScore > 0) "+" else ""}$dayScore P",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF5D4037),
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-
-                HorizontalDivider(color = Color(0xFF8D6E63))
-
-                Text("기록 내역", modifier = Modifier.padding(top = 8.dp), fontSize = 12.sp, color = Color.Gray)
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(Color.White, RoundedCornerShape(4.dp))
-                        .padding(8.dp)
-                ) {
-                    items(records) { record ->
-                        LogRecordItem(record) { viewModel.deleteRecord(record) }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = Color(0xFF8D6E63))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("규칙 적용", fontSize = 12.sp, color = Color.Gray)
-                    Button(
-                        onClick = { showAddCustomDialog = true },
-                        modifier = Modifier.height(32.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
+            } else {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("직접 입력", fontSize = 12.sp)
-                    }
-                }
-                
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("규칙 검색...") },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    trailingIcon = { Icon(Icons.Default.Search, null) },
-                    singleLine = true
-                )
-
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(Color.White, RoundedCornerShape(4.dp))
-                        .padding(8.dp)
-                ) {
-                    val filteredRules = if (searchQuery.isBlank()) rules else rules.filter {
-                        it.title.contains(searchQuery, ignoreCase = true)
-                    }
-                    items(filteredRules) { rule ->
-                        LogRuleItem(rule) { isSuccess ->
-                            val score = if (isSuccess) rule.defaultScore else rule.penalty
-                            val suffix = if (isSuccess) "" else " (실패)"
-                            viewModel.addRecord(date, rule.title + suffix, score, ruleId = rule.id)
+                        Text(
+                            text = "📜 $date 항해 일지",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF3E2723)
+                        )
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
                         }
                     }
-                }
+                    
+                    val dayScore = tempRecords.sumOf { it.score }
+                    Text(
+                        text = "기록 예정 합계 : ${if (dayScore > 0) "+" else ""}$dayScore P",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF5D4037),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = Color(0xFF8D6E63))
 
-                // [추가] 항해 일지 저장 버튼 (로직은 아직 연결하지 않음)
-                Button(
-                    onClick = { /* TODO: 일괄 저장 로직 연결 예정 */ },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("⚓ 항해 일지 저장", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("임시 기록 내역", modifier = Modifier.padding(top = 8.dp), fontSize = 12.sp, color = Color.Gray)
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(Color.White, RoundedCornerShape(4.dp))
+                            .padding(8.dp)
+                    ) {
+                        items(tempRecords) { record ->
+                            LogRecordItem(record) { 
+                                tempRecords = tempRecords.filter { it !== record }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = Color(0xFF8D6E63))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("규칙 적용", fontSize = 12.sp, color = Color.Gray)
+                        Button(
+                            onClick = { showAddCustomDialog = true },
+                            modifier = Modifier.height(32.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
+                        ) {
+                            Text("직접 입력", fontSize = 12.sp)
+                        }
+                    }
+                    
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("규칙 검색...") },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        trailingIcon = { Icon(Icons.Default.Search, null) },
+                        singleLine = true
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(Color.White, RoundedCornerShape(4.dp))
+                            .padding(8.dp)
+                    ) {
+                        val filteredRules = if (searchQuery.isBlank()) rules else rules.filter {
+                            it.title.contains(searchQuery, ignoreCase = true)
+                        }
+                        items(filteredRules) { rule ->
+                            LogRuleItem(rule) { isSuccess ->
+                                val score = if (isSuccess) rule.defaultScore else rule.penalty
+                                val suffix = if (isSuccess) "" else " (실패)"
+                                
+                                val newTempRecord = ScoreRecord(
+                                    date = date,
+                                    timestamp = System.currentTimeMillis(),
+                                    ruleId = rule.id,
+                                    ruleTitle = rule.title + suffix,
+                                    score = score,
+                                    isCustom = false
+                                )
+                                tempRecords = tempRecords + newTempRecord
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                // 선박 상태 체크 (항해 중일 때만 저장 가능)
+                                val isSailing = viewModel.isShipSailing()
+                                if (isSailing) {
+                                    viewModel.saveBatchRecords(date, tempRecords)
+                                    onDismiss()
+                                    Toast.makeText(context, "항해 일지가 저장되었습니다.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "⚓ 정박 중에는 일지를 쓸 수 없습니다. 먼저 출항해주세요!", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("⚓ 항해 일지 최종 저장", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
         }
@@ -313,7 +354,15 @@ fun LogbookDialog(
         AddRecordDialog(
             onDismiss = { showAddCustomDialog = false },
             onSave = { content, score ->
-                viewModel.addRecord(date, content, score)
+                val newCustomRecord = ScoreRecord(
+                    date = date,
+                    timestamp = System.currentTimeMillis(),
+                    ruleId = null,
+                    ruleTitle = content,
+                    score = score,
+                    isCustom = true
+                )
+                tempRecords = tempRecords + newCustomRecord
                 showAddCustomDialog = false
             }
         )
@@ -323,7 +372,9 @@ fun LogbookDialog(
 @Composable
 fun LogRecordItem(record: ScoreRecord, onDelete: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
