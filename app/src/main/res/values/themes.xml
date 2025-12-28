@@ -11,7 +11,8 @@
         <item name="colorOnSecondary">@color/black</item>
 
         <!-- Status bar color. -->
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+        <item name="android:statusBarColor" tools:targetApi="l">@color/text_primary</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
 
         <!-- ★ [핵심] 기본 텍스트 색상을 진하게 설정 -->
         <item name="android:textColor">@color/text_primary</item>

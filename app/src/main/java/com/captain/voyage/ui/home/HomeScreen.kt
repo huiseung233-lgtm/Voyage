@@ -63,18 +63,6 @@ fun HomeScreen(
     val context = LocalContext.current
     val view = LocalView.current
     
-    // Force System UI Colors
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (context as android.app.Activity).window
-            val woodColor = VoyageWoodMedium.toArgb()
-            window.statusBarColor = woodColor
-            window.navigationBarColor = woodColor
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
-        }
-    }
-
     val todayLog by viewModel.todayLog.observeAsState()
     val targetScore by viewModel.targetScore.collectAsStateWithLifecycle()
     val monthlyLogs by viewModel.monthlyLogs.collectAsStateWithLifecycle()

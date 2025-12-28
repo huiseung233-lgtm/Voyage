@@ -60,21 +60,8 @@ fun VoyageTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            // Force Nautical Theme for System Bars globally
-            val woodColor = VoyageWoodMedium.toArgb()
-            window.statusBarColor = woodColor
-            window.navigationBarColor = woodColor
-            
-            // Always light icons on dark wood background
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
-        }
-    }
-
+    // SideEffect removed to be handled in MainActivity
+    
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
