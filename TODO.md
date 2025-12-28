@@ -20,6 +20,7 @@
     - `WorldMapView` (`MapComposables.kt`): `Canvas` 드로잉 최적화 포인트 찾기.
 - [ ] **Goals & Trade (`ui/goals/`, `ui/trade/`)**:
     - 복잡한 비즈니스 로직(목표 달성 체크, 시세 계산)과 UI 상호작용.
+- [ ] **커스텀 골 고도화** 일마다 한번 체크할지, 여러번 체크할 수 있는지 여부 분류
 
 ## 4. 🚀 Optimization Targets (최적화 목표 - 분석 후 실행)
 - [ ] **하드코딩 제거**: `dp`, `color` 값들을 리소스 파일(`dimens.xml`, `colors.xml`)로 분리.
