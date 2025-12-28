@@ -115,16 +115,13 @@ class GameViewModel @Inject constructor(
             // 4. 정박 프로세스 중이면 정박 실행
             if (repository.isDockingProcess) {
                 repository.dockShip()
+                repository.isDockingProcess = false // 프로세스 초기화
                 _toastMessage.value = "⚓ 일지 작성 및 정박 완료!"
             } else {
                 _toastMessage.value = "일지가 저장되었습니다."
             }
         }
     }
-
-    // [New] 로그북 열기 신호 (Activity에서 관찰하여 처리)
-    private val _navigateToLogbook = MutableLiveData<Boolean>()
-    val navigateToLogbook: LiveData<Boolean> get() = _navigateToLogbook
 
     init {
         viewModelScope.launch {
@@ -229,7 +226,6 @@ class GameViewModel @Inject constructor(
     // [New] 정박 전 로그북 작성 요청
     fun openLogbookForDocking() {
         repository.isDockingProcess = true
-        _navigateToLogbook.value = true
     }
 
     // [New] 정박 확정 (바로 정박)
