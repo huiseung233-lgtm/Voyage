@@ -24,10 +24,11 @@ data class SettingsState(
     val morningBuffer: Int = 60,
     val isNotiEnabled: Boolean = false,
     val notiInterval: Int = 60,
-    // [New] 방해 금지 시간 설정
     val isQuietHoursEnabled: Boolean = false,
     val quietStartTime: String = "23:00",
-    val quietEndTime: String = "07:00"
+    val quietEndTime: String = "07:00",
+    // [New] 하이브리드 팝업 설정
+    val isOverlayEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -42,11 +43,12 @@ class SettingsViewModel @Inject constructor(
     private val KEY_MORNING_BUFFER = "morning_buffer"
     private val KEY_NOTI_ENABLED = "noti_enabled"
     private val KEY_NOTI_INTERVAL = "noti_interval"
-    
-    // [New] Keys for Quiet Hours
     private val KEY_QUIET_ENABLED = "quiet_enabled"
     private val KEY_QUIET_START = "quiet_start"
     private val KEY_QUIET_END = "quiet_end"
+    
+    // [New] Key for Overlay
+    private val KEY_OVERLAY_ENABLED = "overlay_enabled"
 
     private val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
@@ -63,11 +65,12 @@ class SettingsViewModel @Inject constructor(
         val bufferMin = prefs.getInt(KEY_MORNING_BUFFER, 60)
         val isNotiEnabled = prefs.getBoolean(KEY_NOTI_ENABLED, false)
         val notiInterval = prefs.getInt(KEY_NOTI_INTERVAL, 60)
-        
-        // [New] Load Quiet Hours
         val isQuietEnabled = prefs.getBoolean(KEY_QUIET_ENABLED, false)
         val quietStart = prefs.getString(KEY_QUIET_START, "23:00") ?: "23:00"
         val quietEnd = prefs.getString(KEY_QUIET_END, "07:00") ?: "07:00"
+        
+        // [New] Load Overlay Setting
+        val isOverlayEnabled = prefs.getBoolean(KEY_OVERLAY_ENABLED, false)
 
         _uiState.update {
             it.copy(
@@ -78,7 +81,8 @@ class SettingsViewModel @Inject constructor(
                 notiInterval = notiInterval,
                 isQuietHoursEnabled = isQuietEnabled,
                 quietStartTime = quietStart,
-                quietEndTime = quietEnd
+                quietEndTime = quietEnd,
+                isOverlayEnabled = isOverlayEnabled
             )
         }
 
@@ -127,7 +131,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
     
-    // [New] 방해 금지 시간 업데이트
     fun updateQuietHours(isEnabled: Boolean? = null, startTime: String? = null, endTime: String? = null) {
         val current = _uiState.value
         val newEnabled = isEnabled ?: current.isQuietHoursEnabled
@@ -147,6 +150,14 @@ class SettingsViewModel @Inject constructor(
                 quietStartTime = newStart,
                 quietEndTime = newEnd
             )
+        }
+    }
+    
+    // [New] 오버레이 설정 업데이트
+    fun updateOverlaySetting(isEnabled: Boolean) {
+        prefs.edit().putBoolean(KEY_OVERLAY_ENABLED, isEnabled).apply()
+        _uiState.update {
+            it.copy(isOverlayEnabled = isEnabled)
         }
     }
 

@@ -23,6 +23,9 @@
     <!-- RECEIVE_BOOT_COMPLETED: 폰이 켜졌을 때 알림을 다시 예약하기 위해 필요합니다. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- SYSTEM_ALERT_WINDOW: 다른 앱 위에 팝업을 띄우기 위한 권한입니다. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <!-- 
         [3단계: 애플리케이션 설정 (Application)]
         앱의 전반적인 아이덴티티(이름, 아이콘, 테마 등)를 설정하는 곳입니다.
@@ -76,6 +79,29 @@
         <!-- 3. 지도 화면: 세계 지도를 보고 목적지를 정하는 화면입니다. -->
         <activity
             android:name=".ui.game.MapActivity"
+            android:exported="false" />
+
+        <!-- 
+            [New] 4. 팝업 화면: 알림 클릭 시 뜨는 투명 배경 액티비티입니다.
+            excludeFromRecents="true": 최근 앱 목록에 남지 않게 하여 '잠깐 떴다 사라지는' 느낌을 줍니다.
+            taskAffinity="": 메인 앱과 별도의 태스크로 실행되어 독립성을 가집니다.
+            launchMode="singleInstance": 한 번에 하나의 팝업만 뜹니다.
+            theme: 투명 배경을 위해 Translucent 테마 사용 (또는 커스텀 테마)
+        -->
+        <activity
+            android:name=".ui.popup.PopupActivity"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance"
+            android:theme="@style/Theme.Voyage.Popup"
+            android:exported="false" />
+            
+        <!-- 
+            [New] 오버레이 서비스 등록
+        -->
+        <service 
+            android:name=".service.ScoreOverlayService"
+            android:enabled="true"
             android:exported="false" />
 
         <!-- 

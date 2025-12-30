@@ -3,20 +3,22 @@ package com.captain.voyage.utils
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
+import com.captain.voyage.service.ScoreOverlayService
 import timber.log.Timber
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 class AlarmReceiver : BroadcastReceiver() {
     
     private val PREF_NAME = "voyage_settings"
     private val KEY_NOTI_ENABLED = "noti_enabled"
     private val KEY_NOTI_INTERVAL = "noti_interval"
-    
-    // [New] Quiet Hours Keys
     private val KEY_QUIET_ENABLED = "quiet_enabled"
     private val KEY_QUIET_START = "quiet_start"
     private val KEY_QUIET_END = "quiet_end"
+    
+    // [New] Overlay Key
+    private val KEY_OVERLAY_ENABLED = "overlay_enabled"
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
@@ -36,11 +38,30 @@ class AlarmReceiver : BroadcastReceiver() {
         if (shouldSkipNotification(context)) {
             Timber.i("🤫 Shhh... It's quiet hours. Skipping notification.")
         } else {
-            // 알림 표시
-            NotificationHelper.showNotification(context)
+            // 2. 오버레이 사용 여부 체크
+            if (shouldShowOverlay(context)) {
+                Timber.d("✨ Launching Overlay Service")
+                val serviceIntent = Intent(context, ScoreOverlayService::class.java)
+                try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        // 백그라운드에서 서비스 시작 제약이 있지만, 오버레이 권한이 있으면 허용될 수 있음
+                        // 안전하게 startForegroundService 사용 고려해야 하나, Notification을 띄워야 해서 복잡해짐.
+                        // 일단 startService 시도.
+                        context.startService(serviceIntent)
+                    } else {
+                        context.startService(serviceIntent)
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to start overlay service, fallback to notification")
+                    NotificationHelper.showNotification(context)
+                }
+            } else {
+                // 3. 알림 표시
+                NotificationHelper.showNotification(context)
+            }
         }
 
-        // 2. 다음 알람 예약 (연쇄 반응 - 항상 수행)
+        // 4. 다음 알람 예약 (항상 수행)
         val interval = intent.getIntExtra("INTERVAL", -1)
         if (interval > 0) {
             Timber.d("⚓ Rescheduling next alarm in $interval minutes")
@@ -48,6 +69,12 @@ class AlarmReceiver : BroadcastReceiver() {
         } else {
             reScheduleAlarm(context)
         }
+    }
+
+    private fun shouldShowOverlay(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        val useOverlay = prefs.getBoolean(KEY_OVERLAY_ENABLED, false)
+        return useOverlay && Settings.canDrawOverlays(context)
     }
 
     private fun shouldSkipNotification(context: Context): Boolean {
@@ -65,12 +92,8 @@ class AlarmReceiver : BroadcastReceiver() {
             val end = LocalTime.parse(endStr)
 
             if (start.isBefore(end)) {
-                // Case 1: 당일 설정 (예: 09:00 ~ 12:00)
-                // Start <= Now < End (종료 시간은 포함하지 않는 것이 일반적이나 여기선 포함 여부 유연하게)
                 now.isAfter(start) && now.isBefore(end)
             } else {
-                // Case 2: 밤샘 설정 (예: 23:00 ~ 07:00)
-                // Now >= Start OR Now < End
                 now.isAfter(start) || now.isBefore(end)
             }
         } catch (e: Exception) {

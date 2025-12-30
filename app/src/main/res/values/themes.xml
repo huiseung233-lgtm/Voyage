@@ -26,4 +26,13 @@
     <style name="VoyageTextView" parent="android:Widget.TextView">
         <item name="android:textColor">@color/text_secondary</item>
     </style>
+
+    <!-- 투명 팝업 액티비티용 테마 -->
+    <style name="Theme.Voyage.Popup" parent="Theme.Voyage">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
 </resources>

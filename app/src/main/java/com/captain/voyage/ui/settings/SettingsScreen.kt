@@ -2,8 +2,11 @@ package com.captain.voyage.ui.settings
 
 import android.Manifest
 import android.app.TimePickerDialog
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,15 +66,13 @@ fun SettingsScreen(
 
     var showResetDialog by remember { mutableStateOf(false) }
 
-    // 권한 요청 런처
-    val permissionLauncher = rememberLauncherForActivityResult(
+    // 알림 권한 요청 런처
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // 권한 허용됨 -> 알림 켜기
             viewModel.updateNotificationSetting(isEnabled = true)
         } else {
-            // 권한 거부됨 -> 토스트 및 토글 끄기(유지)
             Toast.makeText(context, "알림 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
             viewModel.updateNotificationSetting(isEnabled = false)
         }
@@ -81,7 +82,7 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5DC)) // Paper background
+                .background(Color(0xFFF5F5DC))
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -100,7 +101,6 @@ fun SettingsScreen(
 
             // 1. Time Settings
             SettingsSection(title = "⏰ 시간 규칙 설정") {
-                // Limit Time
                 TimeSettingRow(
                     label = "하루 마감 (정박) 시간",
                     desc = "이 시간 전까지는 '어제'로 칩니다.",
@@ -113,7 +113,6 @@ fun SettingsScreen(
                 )
                 HorizontalDivider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Wake Time
                 TimeSettingRow(
                     label = "하루 시작 (기상) 시간",
                     desc = "이 시간부터 출항이 가능합니다.",
@@ -126,7 +125,6 @@ fun SettingsScreen(
                 )
                 HorizontalDivider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Morning Buffer
                 NumberInputRow(
                     label = "아침 점호 여유 시간",
                     desc = "기상 후 몇 분까지 지각 면제?",
@@ -138,7 +136,6 @@ fun SettingsScreen(
 
             // 2. Notification Settings
             SettingsSection(title = "🔔 정기 보고 알림") {
-                // Toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -154,7 +151,6 @@ fun SettingsScreen(
                         checked = uiState.isNotiEnabled,
                         onCheckedChange = { isChecked ->
                             if (isChecked) {
-                                // 켜려고 할 때 권한 체크
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     val hasPermission = ContextCompat.checkSelfPermission(
                                         context,
@@ -164,14 +160,12 @@ fun SettingsScreen(
                                     if (hasPermission) {
                                         viewModel.updateNotificationSetting(isEnabled = true)
                                     } else {
-                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     }
                                 } else {
-                                    // 안드로이드 13 미만은 권한 필요 없음
                                     viewModel.updateNotificationSetting(isEnabled = true)
                                 }
                             } else {
-                                // 끌 때는 그냥 끔
                                 viewModel.updateNotificationSetting(isEnabled = false)
                             }
                         },
@@ -194,7 +188,6 @@ fun SettingsScreen(
                     
                     HorizontalDivider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
 
-                    // [New] 방해 금지 시간 설정
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -225,8 +218,6 @@ fun SettingsScreen(
 
                     if (uiState.isQuietHoursEnabled) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        
-                        // 시작 시간
                         TimeSettingRow(
                             label = "금지 시작",
                             desc = "알림 차단 시작 시간",
@@ -237,10 +228,7 @@ fun SettingsScreen(
                                 }
                             }
                         )
-                        
                         Spacer(modifier = Modifier.height(8.dp))
-                        
-                        // 종료 시간
                         TimeSettingRow(
                             label = "금지 종료",
                             desc = "알림 차단 해제 시간",
@@ -250,6 +238,55 @@ fun SettingsScreen(
                                     viewModel.updateQuietHours(endTime = newTime)
                                 }
                             }
+                        )
+                    }
+
+                    HorizontalDivider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
+
+                    // [New] 하이브리드 팝업 설정 (오버레이)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "✨ 팝업으로 바로 띄우기",
+                                color = Color(0xFF3E2723),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "다른 앱 사용 중에도 즉시 점수를 입력합니다.",
+                                fontSize = 12.sp,
+                                color = Color(0xFF8D6E63)
+                            )
+                        }
+                        Switch(
+                            checked = uiState.isOverlayEnabled,
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) {
+                                    if (!Settings.canDrawOverlays(context)) {
+                                        // 권한이 없으면 설정 화면으로 이동
+                                        Toast.makeText(context, "다른 앱 위에 그리기 권한이 필요합니다.", Toast.LENGTH_LONG).show()
+                                        val intent = Intent(
+                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            Uri.parse("package:${context.packageName}")
+                                        )
+                                        context.startActivity(intent)
+                                        // 체크를 꺼둠 (사용자가 돌아와서 다시 켜야 함)
+                                        viewModel.updateOverlaySetting(false)
+                                    } else {
+                                        viewModel.updateOverlaySetting(true)
+                                    }
+                                } else {
+                                    viewModel.updateOverlaySetting(false)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color(0xFF00796B),
+                                checkedTrackColor = Color(0xFFB2DFDB)
+                            )
                         )
                     }
                 }
@@ -274,7 +311,6 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // [치트 버튼] 오늘 하루 리셋
                 Button(
                     onClick = {
                         viewModel.cheatResetDaily { msg ->
@@ -282,17 +318,15 @@ fun SettingsScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)) // 파란색으로 구분
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
                 ) {
                     Text("🔄 [치트] 오늘 하루 리셋 (점호 가능)", color = Color.White)
                 }
             }
             
-            // Padding at bottom
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        // Reset Confirmation Dialog
         if (showResetDialog) {
             AlertDialog(
                 onDismissRequest = { showResetDialog = false },
@@ -375,7 +409,6 @@ fun NumberInputRow(
     onValueChange: (Int) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
-    // 로컬 상태로 텍스트 관리 (입력 중에는 즉시 반영하지 않음)
     var textState by remember(value) { mutableStateOf(value.toString()) }
 
     Row(
@@ -396,13 +429,11 @@ fun NumberInputRow(
             modifier = Modifier
                 .width(80.dp)
                 .onFocusChanged { focusState ->
-                    // 포커스를 잃었을 때 (다른 곳 터치 등) 최종 값 반영
                     if (!focusState.isFocused) {
                         val newValue = textState.toIntOrNull() ?: value
                         if (newValue != value) {
                             onValueChange(newValue)
                         }
-                        // 만약 비어있다면 원래 값(또는 반영된 값)으로 다시 표시
                         textState = newValue.toString()
                     }
                 },
@@ -411,7 +442,7 @@ fun NumberInputRow(
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(onDone = { 
-                focusManager.clearFocus() // 포커스를 해제하여 onFocusChanged 트리거
+                focusManager.clearFocus()
             }),
             singleLine = true
         )

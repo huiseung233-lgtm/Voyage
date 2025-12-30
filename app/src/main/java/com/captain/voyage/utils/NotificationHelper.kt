@@ -9,7 +9,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.captain.voyage.R
-import com.captain.voyage.ui.main.MainActivity
+import com.captain.voyage.ui.popup.PopupActivity
 import java.util.Calendar
 
 object NotificationHelper {
@@ -17,7 +17,6 @@ object NotificationHelper {
     private const val CHANNEL_ID = "voyage_report_channel"
     const val ALARM_REQUEST_CODE = 1001
 
-    // 1. 알림 채널 생성
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "정기 항해 보고"
@@ -33,13 +32,11 @@ object NotificationHelper {
         }
     }
 
-    // 2. 알림 예약
     fun scheduleNotification(context: Context, intervalMinutes: Int) {
         createNotificationChannel(context)
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         
-        // 권한 체크 (Android 12+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!alarmManager.canScheduleExactAlarms()) {
                 return 
@@ -57,8 +54,6 @@ object NotificationHelper {
         }
 
         val pendingIntent = PendingIntent.getBroadcast(context, ALARM_REQUEST_CODE, intent, flags)
-        
-        // 정각 기준 다음 알람 시간 계산
         val triggerTime = calculateNextAlarmTime(intervalMinutes)
 
         try {
@@ -80,22 +75,17 @@ object NotificationHelper {
         }
     }
 
-    // 다음 정각 시간 계산 로직
     private fun calculateNextAlarmTime(intervalMinutes: Int): Long {
         val interval = if (intervalMinutes <= 0) 60 else intervalMinutes
         val calendar = Calendar.getInstance()
         val currentMinute = calendar.get(Calendar.MINUTE)
         
-        // 다음 정각 분 계산 (예: 13분, 간격 10분 -> 20분)
         var nextMinute = ((currentMinute / interval) + 1) * interval
         
-        // 초, 밀리초 초기화
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
 
         if (nextMinute >= 60) {
-            // 60분을 넘어가면 시간을 증가시키고 분을 조정 (예: 53분, 간격 10분 -> 60분 -> 다음 시간 00분)
-            // nextMinute가 60, 70 등이 될 수 있음
             val hoursToAdd = nextMinute / 60
             val minutesRemainder = nextMinute % 60
             
@@ -105,7 +95,6 @@ object NotificationHelper {
             calendar.set(Calendar.MINUTE, nextMinute)
         }
         
-        // 혹시 계산된 시간이 이미 지났다면(거의 없을 테지만), 다음 주기로 밀기
         if (calendar.timeInMillis <= System.currentTimeMillis()) {
             calendar.add(Calendar.MINUTE, interval)
         }
@@ -113,7 +102,6 @@ object NotificationHelper {
         return calendar.timeInMillis
     }
 
-    // 3. 알림 취소
     fun cancelNotification(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java)
@@ -126,11 +114,10 @@ object NotificationHelper {
         alarmManager.cancel(pendingIntent)
     }
 
-    // 4. 실제 알림 띄우기
     fun showNotification(context: Context) {
-        val intent = Intent(context, MainActivity::class.java).apply {
+        // [Modified] MainActivity -> PopupActivity
+        val intent = Intent(context, PopupActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("OPEN_LOGBOOK", true)
         }
 
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
