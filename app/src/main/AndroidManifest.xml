@@ -20,6 +20,8 @@
     
     <!-- USE_EXACT_ALARM: 위와 세트로 쓰이며, 정확한 알람을 실행할 수 있는 권한을 얻습니다. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- RECEIVE_BOOT_COMPLETED: 폰이 켜졌을 때 알림을 다시 예약하기 위해 필요합니다. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- 
         [3단계: 애플리케이션 설정 (Application)]
@@ -82,7 +84,7 @@
         -->
         <receiver
             android:name=".utils.AlarmReceiver"
-            android:exported="false"> 
+            android:exported="true"> 
             <!-- 
                 AlarmReceiver: 알람 시간이 되면 깨어나서 알림을 띄워줍니다.
                 BOOT_COMPLETED: 폰을 껐다 켰을 때도 알람 설정을 복구하기 위해 신호를 받습니다.

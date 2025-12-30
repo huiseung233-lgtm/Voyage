@@ -1,7 +1,12 @@
 package com.captain.voyage.ui.settings
 
+import android.Manifest
 import android.app.TimePickerDialog
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -23,7 +27,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -47,6 +50,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.captain.voyage.ui.theme.VoyageTheme
 
 @Composable
@@ -58,6 +62,20 @@ fun SettingsScreen(
     val focusManager = LocalFocusManager.current
 
     var showResetDialog by remember { mutableStateOf(false) }
+
+    // 권한 요청 런처
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // 권한 허용됨 -> 알림 켜기
+            viewModel.updateNotificationSetting(isEnabled = true)
+        } else {
+            // 권한 거부됨 -> 토스트 및 토글 끄기(유지)
+            Toast.makeText(context, "알림 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+            viewModel.updateNotificationSetting(isEnabled = false)
+        }
+    }
 
     VoyageTheme {
         Column(
@@ -134,7 +152,29 @@ fun SettingsScreen(
                     )
                     Switch(
                         checked = uiState.isNotiEnabled,
-                        onCheckedChange = { viewModel.updateNotificationSetting(isEnabled = it) },
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                // 켜려고 할 때 권한 체크
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPermission = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                    if (hasPermission) {
+                                        viewModel.updateNotificationSetting(isEnabled = true)
+                                    } else {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                } else {
+                                    // 안드로이드 13 미만은 권한 필요 없음
+                                    viewModel.updateNotificationSetting(isEnabled = true)
+                                }
+                            } else {
+                                // 끌 때는 그냥 끔
+                                viewModel.updateNotificationSetting(isEnabled = false)
+                            }
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color(0xFF6200EE),
                             checkedTrackColor = Color(0xFFBB86FC)
