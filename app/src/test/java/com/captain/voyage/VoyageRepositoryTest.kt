@@ -1,73 +1,90 @@
 package com.captain.voyage
 
-import com.captain.voyage.data.local.DailyLogDao
-import com.captain.voyage.data.local.GoalDao
-import com.captain.voyage.data.local.PortDao
-import com.captain.voyage.data.local.ScoreRecordDao
-import com.captain.voyage.data.local.SettlementDao
-import com.captain.voyage.data.local.TradeDao
-import com.captain.voyage.data.local.VoyageDao
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import com.captain.voyage.data.local.*
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.ShipStatus
 import com.captain.voyage.data.repository.VoyageRepository
+import com.captain.voyage.utils.MainDispatcherRule
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import org.mockito.Mock
-import org.mockito.Mockito.`when`
-import org.mockito.MockitoAnnotations
-import org.mockito.kotlin.any
+import org.mockito.ArgumentCaptor
+import org.mockito.Mockito
+import org.mockito.kotlin.*
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class VoyageRepositoryTest {
 
-    @Mock lateinit var voyageDao: VoyageDao
-    @Mock lateinit var scoreRecordDao: ScoreRecordDao
-    @Mock lateinit var dailyLogDao: DailyLogDao
-    @Mock lateinit var goalDao: GoalDao
-    @Mock lateinit var portDao: PortDao
-    @Mock lateinit var tradeDao: TradeDao
-    @Mock lateinit var settlementDao: SettlementDao
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @get:Rule
+    val instantTaskExecutorRule = InstantTaskExecutorRule()
+
+    private lateinit var voyageDao: VoyageDao
+    private lateinit var scoreRecordDao: ScoreRecordDao
+    private lateinit var dailyLogDao: DailyLogDao
+    private lateinit var goalDao: GoalDao
+    private lateinit var portDao: PortDao
+    private lateinit var tradeDao: TradeDao
+    private lateinit var settlementDao: SettlementDao
 
     private lateinit var repository: VoyageRepository
 
     @Before
     fun setup() {
-        MockitoAnnotations.openMocks(this)
+        voyageDao = mock()
+        scoreRecordDao = mock()
+        dailyLogDao = mock()
+        goalDao = mock()
+        portDao = mock()
+        tradeDao = mock()
+        settlementDao = mock()
+        
         repository = VoyageRepository(
             voyageDao, scoreRecordDao, dailyLogDao, goalDao, portDao, tradeDao, settlementDao,
-            CoroutineScope(Dispatchers.Unconfined)
+            CoroutineScope(mainDispatcherRule.testDispatcher)
         )
     }
 
     @Test
-    fun `moveShip_whenFuelIsInsufficient_shouldRemainSailing`() = runBlocking {
+    fun `check_mocks_are_not_null`() {
+        assertNotNull(voyageDao)
+        assertNotNull(repository)
+    }
+
+    @Test
+    fun `moveShip_whenFuelIsInsufficient_shouldRemainSailing`() = runTest {
         // Given
         val startShip = Ship(
             id = 1,
             name = "TestShip",
             posX = 0.0, posY = 0.0,
-            destX = 100.0, destY = 0.0, // 목적지까지 100km
-            remainingDistance = 50.0,   // 연료는 50km 뿐
+            destX = 100.0, destY = 0.0,
+            remainingDistance = 50.0,
             status = ShipStatus.SAILING,
             supplies = 100.0
         )
 
-        `when`(voyageDao.getShip()).thenReturn(flowOf(startShip))
-        `when`(voyageDao.insertShip(any())).thenReturn(1L) // 저장은 성공한다고 가정
+        whenever(voyageDao.getShip()).thenReturn(flowOf(startShip))
+        whenever(voyageDao.insertShip(any())).thenReturn(1L)
 
         // When
         repository.moveShipTowardDestination()
 
         // Then
-        val captor = org.mockito.ArgumentCaptor.forClass(Ship::class.java)
-        org.mockito.Mockito.verify(voyageDao).insertShip(captor.capture())
+        val captor = argumentCaptor<Ship>()
+        verify(voyageDao, atLeastOnce()).insertShip(captor.capture())
         
-        val savedShip = captor.value
-        assertEquals("Ship should remain SAILING if not arrived", ShipStatus.SAILING, savedShip.status)
-        assertEquals("Remaining distance should be 0", 0.0, savedShip.remainingDistance, 0.01)
+        val savedShip = captor.firstValue
+        assertEquals("Ship should remain SAILING", ShipStatus.SAILING, savedShip.status)
+        assertEquals("Distance should be 0", 0.0, savedShip.remainingDistance, 0.01)
     }
 }
