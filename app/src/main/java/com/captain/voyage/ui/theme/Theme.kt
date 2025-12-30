@@ -8,23 +8,26 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple200,
     secondary = Teal200,
     tertiary = Purple700,
-    background = VoyageBackgroundDark, // Darker paper in dark mode? Or default dark. Keeping consistent with XML for now.
+    background = VoyageBackgroundDark, 
     surface = VoyageBackgroundDark,
     onPrimary = Black,
     onSecondary = Black,
     onTertiary = White,
-    onBackground = VoyageTextPrimary, // Might need adjustment for dark mode readability
+    onBackground = VoyageTextPrimary, 
     onSurface = VoyageTextPrimary
 )
 
@@ -39,16 +42,11 @@ private val LightColorScheme = lightColorScheme(
     onTertiary = White,
     onBackground = VoyageTextSecondary,
     onSurface = VoyageTextPrimary
-
-    /* Other default colors to override
-    error = Color(0xFFBA1A1A),
-    */
 )
 
 @Composable
 fun VoyageTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+. Set default to false for pixel art style.
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -60,11 +58,25 @@ fun VoyageTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
-    // SideEffect removed to be handled in MainActivity
     
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
         content = content
+    )
+}
+
+@Composable
+fun voyageTextFieldColors(): TextFieldColors {
+    return OutlinedTextFieldDefaults.colors(
+        focusedTextColor = VoyageTextPrimary,
+        unfocusedTextColor = VoyageTextPrimary,
+        focusedContainerColor = White,
+        unfocusedContainerColor = White,
+        focusedBorderColor = Color(0xFF5D4037),
+        unfocusedBorderColor = Color(0xFF8D6E63),
+        focusedLabelColor = Color(0xFF5D4037),
+        unfocusedLabelColor = Color(0xFF8D6E63),
+        cursorColor = Color(0xFF5D4037)
     )
 }

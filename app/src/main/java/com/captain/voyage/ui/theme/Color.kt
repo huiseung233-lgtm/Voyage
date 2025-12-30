@@ -16,6 +16,7 @@ val VoyageTextSecondary = Color(0xFF4E342E)
 val VoyageTextHint = Color(0xFF8D6E63)
 
 val VoyageBackgroundPaper = Color(0xFFF5F5DC)
+val VoyageBackgroundParchment = Color(0xFFFFF8E1) // Cream/Parchment for Dialogs
 val VoyageBackgroundDark = Color(0xFFD7CCC8)
 
 val VoyageWoodDark = Color(0xFF1a120d)

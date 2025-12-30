@@ -72,6 +72,8 @@ import com.captain.voyage.ui.game.WorldMapView
 import com.captain.voyage.ui.game.MapActivity
 import android.content.Intent
 import java.time.LocalDate
+import com.captain.voyage.ui.theme.VoyageBackgroundParchment
+import com.captain.voyage.ui.theme.voyageTextFieldColors
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -368,7 +370,8 @@ fun SimpleGoalDialog(
                 onValueChange = { if (it.all { c -> c.isDigit() }) scoreStr = it },
                 label = { Text("목표 점수") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true
+                singleLine = true,
+                colors = voyageTextFieldColors()
             )
         },
         confirmButton = {
@@ -382,7 +385,7 @@ fun SimpleGoalDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("취소", color = Color(0xFF5D4037)) }
         },
-        containerColor = Color(0xFFFFF8E1)
+        containerColor = VoyageBackgroundParchment
     )
 }
 
@@ -431,7 +434,8 @@ fun CustomGoalDialog(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("목표 이름 (예: 다이어트)") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = voyageTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -441,7 +445,8 @@ fun CustomGoalDialog(
                     onValueChange = { if (it.all { c -> c.isDigit() }) scoreStr = it },
                     label = { Text("목표 점수") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = voyageTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 
@@ -455,11 +460,7 @@ fun CustomGoalDialog(
                             readOnly = true,
                             enabled = false,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = Color.Black,
-                                disabledBorderColor = Color.Gray,
-                                disabledLabelColor = Color.Gray
-                            ),
+                            colors = voyageTextFieldColors(),
                             trailingIcon = { Icon(Icons.Default.DateRange, null) }
                         )
                     }
@@ -471,11 +472,7 @@ fun CustomGoalDialog(
                             readOnly = true,
                             enabled = false,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = Color.Black,
-                                disabledBorderColor = Color.Gray,
-                                disabledLabelColor = Color.Gray
-                            ),
+                            colors = voyageTextFieldColors(),
                             trailingIcon = { Icon(Icons.Default.DateRange, null) }
                         )
                     }
@@ -491,7 +488,8 @@ fun CustomGoalDialog(
                     placeholder = { Text("규칙 검색...") },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     trailingIcon = { Icon(Icons.Default.Search, null) },
-                    singleLine = true
+                    singleLine = true,
+                    colors = voyageTextFieldColors()
                 )
 
                 // 4. 스크롤 가능한 리스트 (높이 제한)
@@ -540,6 +538,6 @@ fun CustomGoalDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("취소", color = Color(0xFF5D4037)) }
         },
-        containerColor = Color(0xFFFFF8E1)
+        containerColor = VoyageBackgroundParchment
     )
 }

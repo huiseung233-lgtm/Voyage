@@ -42,6 +42,8 @@ import com.captain.voyage.data.model.ScoreRecord
 import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import com.captain.voyage.ui.theme.VoyageBackgroundParchment
+import com.captain.voyage.ui.theme.voyageTextFieldColors
 
 // --- Calendar Dialog ---
 // (기존 CalendarDialog 코드는 변경 없음, 생략하지 않고 그대로 유지)
@@ -329,7 +331,6 @@ fun CommonLogbookDialog(
     }
 }
 
-// ... (나머지 LogRecordItem, LogRuleItem, AddRecordDialog 등은 그대로 유지됨)
 @Composable
 fun LogRecordItem(record: ScoreRecord, onDelete: () -> Unit) {
     Row(
@@ -395,14 +396,16 @@ fun AddRecordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("직접 기록 추가") },
+        containerColor = VoyageBackgroundParchment,
+        title = { Text("직접 기록 추가", color = Color(0xFF3E2723)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
                     label = { Text("내용") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = voyageTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
@@ -410,7 +413,8 @@ fun AddRecordDialog(
                     onValueChange = { if (it.all { c -> c.isDigit() || c == '-' }) scoreStr = it },
                     label = { Text("점수 (예: 10, -5)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = voyageTextFieldColors()
                 )
             }
         },
@@ -421,14 +425,15 @@ fun AddRecordDialog(
                     if (content.isNotBlank()) {
                         onSave(content, score)
                     }
-                }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
             ) {
-                Text("기록")
+                Text("기록", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소")
+                Text("취소", color = Color(0xFF5D4037))
             }
         }
     )

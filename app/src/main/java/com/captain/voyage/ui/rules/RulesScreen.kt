@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -52,6 +53,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.captain.voyage.R
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.ui.theme.VoyageTheme
+import com.captain.voyage.ui.theme.VoyageBackgroundParchment
+import com.captain.voyage.ui.theme.voyageTextFieldColors
 
 @Composable
 fun RulesScreen(
@@ -262,52 +265,73 @@ fun RuleEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (rule == null) "📜 새로운 선박 규율" else "📜 규율 내용 수정") },
+        containerColor = VoyageBackgroundParchment,
+        title = { Text(if (rule == null) "📜 새로운 선박 규율" else "📜 규율 내용 수정", color = Color(0xFF3E2723)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("규율 이름") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = voyageTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("상세 설명") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = voyageTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Reward Stepper
-                Text("보상 점수 (Reward)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("보상 점수 (Reward)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { reward -= 5 }) { Text("-5") }
+                    Button(
+                        onClick = { reward -= 5 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
+                    ) { Text("-5", color = Color.White) }
                     Text(
                         text = "$reward",
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 8.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        color = Color(0xFF3E2723),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
                     )
-                    Button(onClick = { reward += 5 }) { Text("+5") }
+                    Button(
+                        onClick = { reward += 5 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
+                    ) { Text("+5", color = Color.White) }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Penalty Stepper
-                Text("패널티 점수 (Penalty)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("패널티 점수 (Penalty)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { penalty -= 5 }) { Text("-5") }
+                    Button(
+                        onClick = { penalty -= 5 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
+                    ) { Text("-5", color = Color.White) }
                     Text(
                         text = "$penalty",
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 8.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        color = Color(0xFF3E2723),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
                     )
-                    Button(onClick = { penalty += 5 }) { Text("+5") }
+                    Button(
+                        onClick = { penalty += 5 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
+                    ) { Text("+5", color = Color.White) }
                 }
             }
         },
@@ -317,14 +341,15 @@ fun RuleEditorDialog(
                     if (title.isNotBlank()) {
                         onConfirm(title, description, reward, penalty)
                     }
-                }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
             ) {
-                Text(if (rule == null) "서명 ✍️" else "수정 완료")
+                Text(if (rule == null) "서명 ✍️" else "수정 완료", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소")
+                Text("취소", color = Color(0xFF5D4037))
             }
         }
     )
