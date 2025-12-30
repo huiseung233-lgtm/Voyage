@@ -191,6 +191,67 @@ fun SettingsScreen(
                         unit = "분 마다",
                         onValueChange = { viewModel.updateNotificationSetting(interval = it) }
                     )
+                    
+                    HorizontalDivider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 12.dp))
+
+                    // [New] 방해 금지 시간 설정
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "🚫 방해 금지 시간",
+                                color = Color(0xFF3E2723),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "설정된 시간에는 알림이 울리지 않습니다.",
+                                fontSize = 12.sp,
+                                color = Color(0xFF8D6E63)
+                            )
+                        }
+                        Switch(
+                            checked = uiState.isQuietHoursEnabled,
+                            onCheckedChange = { viewModel.updateQuietHours(isEnabled = it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color(0xFFD32F2F),
+                                checkedTrackColor = Color(0xFFFFCDD2)
+                            )
+                        )
+                    }
+
+                    if (uiState.isQuietHoursEnabled) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // 시작 시간
+                        TimeSettingRow(
+                            label = "금지 시작",
+                            desc = "알림 차단 시작 시간",
+                            timeStr = uiState.quietStartTime,
+                            onTimeClick = {
+                                showTimePicker(context, uiState.quietStartTime) { newTime ->
+                                    viewModel.updateQuietHours(startTime = newTime)
+                                }
+                            }
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // 종료 시간
+                        TimeSettingRow(
+                            label = "금지 종료",
+                            desc = "알림 차단 해제 시간",
+                            timeStr = uiState.quietEndTime,
+                            onTimeClick = {
+                                showTimePicker(context, uiState.quietEndTime) { newTime ->
+                                    viewModel.updateQuietHours(endTime = newTime)
+                                }
+                            }
+                        )
+                    }
                 }
             }
 

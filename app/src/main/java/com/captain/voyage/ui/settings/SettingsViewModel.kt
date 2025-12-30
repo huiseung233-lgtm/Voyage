@@ -1,10 +1,8 @@
 package com.captain.voyage.ui.settings
 
-import android.app.Application
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.captain.voyage.VoyageApplication
 import com.captain.voyage.data.repository.VoyageRepository
 import com.captain.voyage.utils.NotificationHelper
 import com.captain.voyage.utils.TimeManager
@@ -25,7 +23,11 @@ data class SettingsState(
     val wakeTime: String = "07:00",
     val morningBuffer: Int = 60,
     val isNotiEnabled: Boolean = false,
-    val notiInterval: Int = 60
+    val notiInterval: Int = 60,
+    // [New] 방해 금지 시간 설정
+    val isQuietHoursEnabled: Boolean = false,
+    val quietStartTime: String = "23:00",
+    val quietEndTime: String = "07:00"
 )
 
 @HiltViewModel
@@ -40,6 +42,11 @@ class SettingsViewModel @Inject constructor(
     private val KEY_MORNING_BUFFER = "morning_buffer"
     private val KEY_NOTI_ENABLED = "noti_enabled"
     private val KEY_NOTI_INTERVAL = "noti_interval"
+    
+    // [New] Keys for Quiet Hours
+    private val KEY_QUIET_ENABLED = "quiet_enabled"
+    private val KEY_QUIET_START = "quiet_start"
+    private val KEY_QUIET_END = "quiet_end"
 
     private val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
@@ -56,6 +63,11 @@ class SettingsViewModel @Inject constructor(
         val bufferMin = prefs.getInt(KEY_MORNING_BUFFER, 60)
         val isNotiEnabled = prefs.getBoolean(KEY_NOTI_ENABLED, false)
         val notiInterval = prefs.getInt(KEY_NOTI_INTERVAL, 60)
+        
+        // [New] Load Quiet Hours
+        val isQuietEnabled = prefs.getBoolean(KEY_QUIET_ENABLED, false)
+        val quietStart = prefs.getString(KEY_QUIET_START, "23:00") ?: "23:00"
+        val quietEnd = prefs.getString(KEY_QUIET_END, "07:00") ?: "07:00"
 
         _uiState.update {
             it.copy(
@@ -63,11 +75,13 @@ class SettingsViewModel @Inject constructor(
                 wakeTime = wakeStr,
                 morningBuffer = bufferMin,
                 isNotiEnabled = isNotiEnabled,
-                notiInterval = notiInterval
+                notiInterval = notiInterval,
+                isQuietHoursEnabled = isQuietEnabled,
+                quietStartTime = quietStart,
+                quietEndTime = quietEnd
             )
         }
 
-        // 초기 실행 시 TimeManager 동기화
         updateTimeManager(limitStr, wakeStr, bufferMin)
     }
 
@@ -112,6 +126,29 @@ class SettingsViewModel @Inject constructor(
             NotificationHelper.cancelNotification(context)
         }
     }
+    
+    // [New] 방해 금지 시간 업데이트
+    fun updateQuietHours(isEnabled: Boolean? = null, startTime: String? = null, endTime: String? = null) {
+        val current = _uiState.value
+        val newEnabled = isEnabled ?: current.isQuietHoursEnabled
+        val newStart = startTime ?: current.quietStartTime
+        val newEnd = endTime ?: current.quietEndTime
+        
+        prefs.edit().apply {
+            putBoolean(KEY_QUIET_ENABLED, newEnabled)
+            putString(KEY_QUIET_START, newStart)
+            putString(KEY_QUIET_END, newEnd)
+            apply()
+        }
+        
+        _uiState.update {
+            it.copy(
+                isQuietHoursEnabled = newEnabled,
+                quietStartTime = newStart,
+                quietEndTime = newEnd
+            )
+        }
+    }
 
     private fun updateTimeManager(limitStr: String, wakeStr: String, buffer: Int) {
         try {
@@ -125,9 +162,6 @@ class SettingsViewModel @Inject constructor(
 
     fun resetAllData(onComplete: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            // Hilt 주입으로 Database에 직접 접근하지 않고, Repository나 UseCase를 통해야 하지만,
-            // 지금은 임시로 ApplicationContext를 캐스팅하거나 해야 함.
-            // 하지만 Database 인스턴스를 주입받지 않았으므로 여기서는 VoyageDatabase.getDatabase(context)를 호출.
             com.captain.voyage.data.local.VoyageDatabase.getDatabase(context).clearAllTables()
             withContext(Dispatchers.Main) {
                 onComplete()
@@ -135,7 +169,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // [치트] 오늘 하루 리셋 (무한 점호 가능)
     fun cheatResetDaily(onResult: (String) -> Unit) {
         viewModelScope.launch {
             val msg = repository.resetDailyStatus()
