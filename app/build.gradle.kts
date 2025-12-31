@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation("androidx.compose.runtime:runtime-livedata:1.7.6") // Added for observeAsState
+    implementation(libs.sh.calvin.reorderable)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
