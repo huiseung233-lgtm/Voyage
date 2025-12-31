@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -64,11 +65,12 @@ fun RulesScreen(
     var editingRule by remember { mutableStateOf<Rule?>(null) }
     var ruleToDelete by remember { mutableStateOf<Rule?>(null) }
 
-    // [New] 로컬 상태 관리: 드래그 중에는 UI가 즉시 반응해야 하므로 로컬 state 사용
+    // [Fix] 로컬 상태 관리: DB 데이터 로드 시 초기화 및 검색어 상태 대응
     var localRules by remember { mutableStateOf(rules) }
     
-    // DB 데이터가 바뀌면 로컬 상태 동기화 (단, 드래그 중이 아닐 때만 하는 것이 좋지만, 간단히 동기화)
+    // DB 데이터가 처음 로드되거나 '검색' 등으로 필터링된 결과가 바뀔 때만 localRules 동기화
     LaunchedEffect(rules) {
+        // 순서 변경 중이 아닐 때만 동기화하여 드래그 중 튀는 현상 방지
         localRules = rules
     }
 
@@ -105,7 +107,6 @@ fun RulesScreen(
                 // Search Bar
                 var searchQuery by remember { mutableStateOf("") }
                 
-                // [New] 검색어 업데이트 시 로직
                 fun updateSearch(query: String) {
                     searchQuery = query
                     viewModel.setSearchQuery(query)
@@ -124,31 +125,28 @@ fun RulesScreen(
                 )
 
                 // [Fix] Reorderable State
-                // 검색 중이 아닐 때만 드래그 가능하도록 설정
                 val isReorderingEnabled = searchQuery.isBlank()
-
-                // Rules List
-                val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                val lazyListState = rememberLazyListState()
                 
-                // [Fix] rememberReorderableLazyColumnState API usage
                 val reorderableState = rememberReorderableLazyColumnState(lazyListState) { from, to ->
-                    // 1. UI 즉시 갱신 (순서 변경 로직)
+                    // UI 즉시 반영
                     localRules = localRules.toMutableList().apply {
                         add(to.index, removeAt(from.index))
                     }
-                    // 진동 피드백 등을 추가할 수 있음
                 }
                 
-                // [Fix] 드래그 종료 감지 (onDragEnd가 없을 경우 LaunchedEffect로 처리하거나 onSettle 사용)
-                // 2.x 버전에서는 state의 isDragging이 false가 되는 시점을 감지하여 저장하는 것이 안전함
-                LaunchedEffect(reorderableState.isAnyItemDragging) {
-                    if (!reorderableState.isAnyItemDragging) {
-                        // 드래그가 끝났고, 순서가 변경되었다면 저장
-                        // (단, 초기 로딩 시 호출 방지 및 실제 변경 확인 필요)
+                // 드래그 종료 감지 및 DB 저장
+                val isDragging = reorderableState.isAnyItemDragging
+                var wasDragging by remember { mutableStateOf(false) }
+
+                LaunchedEffect(isDragging) {
+                    if (wasDragging && !isDragging) {
+                        // 드래그가 방금 끝남
                         if (localRules != rules) {
                              viewModel.updateRulesOrder(localRules)
                         }
                     }
+                    wasDragging = isDragging
                 }
 
                 LazyColumn(
@@ -160,19 +158,18 @@ fun RulesScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(localRules, key = { it.id }) { rule ->
-                        // [New] ReorderableItem Wrapper
-                        ReorderableItem(reorderableState, key = rule.id) { isDragging ->
+                        ReorderableItem(reorderableState, key = rule.id) { isItemDragging ->
                             
-                            val elevation = animateDpAsState(if (isDragging) 8.dp else 2.dp, label = "elevation")
+                            val elevation = animateDpAsState(if (isItemDragging) 8.dp else 2.dp, label = "elevation")
                             
                             RuleItem(
                                 rule = rule,
-                                isDragging = isDragging,
+                                isDragging = isItemDragging,
                                 isReorderingEnabled = isReorderingEnabled,
-                                modifier = Modifier.shadow(elevation.value), // 카드 전체 스타일
-                                handleModifier = Modifier.draggableHandle(), // 핸들 전용 modifier
+                                modifier = Modifier.shadow(elevation.value),
+                                handleModifier = Modifier.draggableHandle(),
                                 onClick = {
-                                    if (!isDragging) {
+                                    if (!isItemDragging) {
                                         editingRule = rule
                                         showAddDialog = true
                                     }
@@ -188,7 +185,53 @@ fun RulesScreen(
 
         // Add/Edit Dialog
         if (showAddDialog) {
-// ... (생략)
+            RuleEditorDialog(
+                rule = editingRule,
+                onDismiss = {
+                    showAddDialog = false
+                    editingRule = null
+                },
+                onConfirm = { title, desc, reward, penalty ->
+                    if (editingRule == null) {
+                        viewModel.addRule(title, desc, reward, penalty)
+                    } else {
+                        viewModel.updateRule(
+                            editingRule!!.copy(
+                                title = title,
+                                description = desc,
+                                defaultScore = reward,
+                                penalty = penalty
+                            )
+                        )
+                    }
+                    showAddDialog = false
+                    editingRule = null
+                }
+            )
+        }
+
+        // Delete Confirmation Dialog
+        if (ruleToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { ruleToDelete = null },
+                title = { Text("규율 폐기") },
+                text = { Text("'${ruleToDelete?.title}' 규율을 정말 삭제하시겠습니까?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            ruleToDelete?.let { viewModel.deleteRule(it) }
+                            ruleToDelete = null
+                        }
+                    ) {
+                        Text("폐기", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { ruleToDelete = null }) {
+                        Text("취소")
+                    }
+                }
+            )
         }
     }
 }
@@ -198,15 +241,15 @@ fun RuleItem(
     rule: Rule,
     isDragging: Boolean = false,
     isReorderingEnabled: Boolean = true,
-    modifier: Modifier = Modifier, // 카드 전체에 적용될 modifier
-    handleModifier: Modifier = Modifier, // 드래그 핸들에만 적용될 modifier
+    modifier: Modifier = Modifier,
+    handleModifier: Modifier = Modifier,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick), // 클릭 리스너
         colors = CardDefaults.cardColors(
             containerColor = if (isDragging) Color(0xFFD7CCC8) else Color(0xFFF5F5DC)
         ),
@@ -220,18 +263,23 @@ fun RuleItem(
         ) {
             // Drag Handle
             if (isReorderingEnabled) {
+                // 핸들 아이콘에만 드래그 감지 적용
                 Icon(
                     painter = painterResource(id = R.drawable.ic_drag_handle),
                     contentDescription = "Drag to reorder",
                     tint = Color(0xFF8D6E63),
-                    modifier = handleModifier.size(24.dp) // ★ 전달받은 draggableHandle 적용
+                    modifier = handleModifier.size(24.dp) // ★ ReorderableItem에서 받은 modifier 사용
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             } else {
                 Spacer(modifier = Modifier.width(36.dp)) 
             }
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onClick) // 텍스트 영역에도 클릭 추가 (이중 보장)
+            ) {
                 Text(
                     text = rule.title,
                     color = Color(0xFF3E2723),
@@ -257,7 +305,7 @@ fun RuleItem(
 
             IconButton(onClick = onDeleteClick) {
                 Icon(
-                    imageVector = Icons.Default.Delete, // Or R.drawable.ic_delete
+                    imageVector = Icons.Default.Delete,
                     contentDescription = "Delete",
                     tint = Color(0xFFD32F2F)
                 )
