@@ -7,6 +7,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.ShipStatus
+import com.captain.voyage.data.model.UserStatus
 import com.captain.voyage.data.repository.DailyBriefing
 import com.captain.voyage.data.repository.GoalRepository
 import com.captain.voyage.data.repository.SettlementRepository
@@ -154,6 +155,16 @@ class GameViewModel @Inject constructor(
                         voyageRepository.startVoyage()
                     }
                 }
+                
+                // [New] 유저 상태 초기화
+                val currentUser = voyageRepository.userStatus.first()
+                if (currentUser == null) {
+                    val defaultUser = UserStatus(
+                        gold = 1000L // 초기 자금
+                    )
+                    voyageRepository.saveUserStatus(defaultUser)
+                }
+                
             } catch (e: Exception) {
                 e.printStackTrace()
                 _toastMessage.postValue("데이터 로드 중 오류 발생: ${e.message}")

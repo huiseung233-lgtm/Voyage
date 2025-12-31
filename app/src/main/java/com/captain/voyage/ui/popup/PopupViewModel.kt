@@ -6,6 +6,7 @@ import com.captain.voyage.data.model.DailyLog
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.model.ShipStatus
+import com.captain.voyage.data.repository.GoalRepository
 import com.captain.voyage.data.repository.VoyageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,12 +23,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PopupViewModel @Inject constructor(
-    private val repository: VoyageRepository
+    private val voyageRepository: VoyageRepository,
+    private val goalRepository: GoalRepository
 ) : ViewModel() {
 
     val todayDate: String = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
-    val rules: StateFlow<List<Rule>> = repository.allRules
+    val rules: StateFlow<List<Rule>> = voyageRepository.allRules
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _initialRecords = MutableStateFlow<List<ScoreRecord>?>(null)
@@ -39,29 +41,29 @@ class PopupViewModel @Inject constructor(
 
     private fun loadTodayRecords() {
         viewModelScope.launch {
-            _initialRecords.value = repository.getScoreRecordsByDate(todayDate).first()
+            _initialRecords.value = goalRepository.getScoreRecordsByDate(todayDate).first()
         }
     }
     
-    // [New] 항해 상태 확인
+    // [New] 항해 상태 확인 (Core)
     suspend fun isShipSailing(): Boolean {
-        val currentShip = repository.ship.first()
+        val currentShip = voyageRepository.ship.first()
         return currentShip?.status == ShipStatus.SAILING
     }
 
     fun saveBatchRecords(newRecords: List<ScoreRecord>, onComplete: () -> Unit) {
         viewModelScope.launch {
-            val oldRecords = repository.getScoreRecordsByDate(todayDate).first()
-            oldRecords.forEach { repository.deleteScoreRecord(it) }
+            val oldRecords = goalRepository.getScoreRecordsByDate(todayDate).first()
+            oldRecords.forEach { goalRepository.deleteScoreRecord(it) }
 
             var totalScore = 0
             newRecords.forEach { 
-                repository.insertScoreRecord(it)
+                goalRepository.insertScoreRecord(it)
                 totalScore += it.score
             }
 
             val log = DailyLog(date = todayDate, totalScore = totalScore)
-            repository.updateDailyLog(log)
+            goalRepository.updateDailyLog(log)
             
             onComplete()
         }

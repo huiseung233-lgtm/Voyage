@@ -32,6 +32,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.captain.voyage.data.repository.GoalRepository
 import com.captain.voyage.data.repository.VoyageRepository
 import com.captain.voyage.ui.home.LogbookContent
 import com.captain.voyage.ui.popup.PopupViewModel
@@ -48,7 +49,10 @@ import javax.inject.Inject
 class ScoreOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
     @Inject
-    lateinit var repository: VoyageRepository
+    lateinit var voyageRepository: VoyageRepository
+
+    @Inject
+    lateinit var goalRepository: GoalRepository
 
     private val windowManager by lazy { getSystemService(Context.WINDOW_SERVICE) as WindowManager }
     private var overlayView: View? = null
@@ -65,7 +69,7 @@ class ScoreOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         savedStateRegistryController.performRestore(null)
         serviceLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         
-        viewModel = PopupViewModel(repository)
+        viewModel = PopupViewModel(voyageRepository, goalRepository)
 
         showOverlay()
     }

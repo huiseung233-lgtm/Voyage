@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -190,6 +191,19 @@ class SettingsViewModel @Inject constructor(
             // 2. 선박 리셋 (VoyageRepo)
             val msg = voyageRepository.resetShipStatus()
             onResult("🔄 오늘 하루 리셋 완료! (로그 삭제 + $msg)")
+        }
+    }
+
+    fun cheatAddGold(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val status = voyageRepository.userStatus.first()
+            if (status != null) {
+                val newStatus = status.copy(gold = status.gold + 100000)
+                voyageRepository.saveUserStatus(newStatus)
+                onResult("💰 100,000 골드가 지급되었습니다! (현재: ${newStatus.gold}G)")
+            } else {
+                onResult("❌ 유저 정보를 찾을 수 없습니다.")
+            }
         }
     }
 }
