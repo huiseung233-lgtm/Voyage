@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.model.Goal
 import com.captain.voyage.data.model.GoalType
 import com.captain.voyage.data.model.Rule
+import com.captain.voyage.data.repository.GoalRepository
 import com.captain.voyage.data.repository.VoyageRepository
+import com.captain.voyage.data.repository.WorldRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,36 +30,38 @@ data class GoalUiState(
 
 @HiltViewModel
 class GoalsViewModel @Inject constructor(
-    private val repository: VoyageRepository
+    private val voyageRepository: VoyageRepository,
+    private val goalRepository: GoalRepository,
+    private val worldRepository: WorldRepository
 ) : ViewModel() {
 
     init {
         viewModelScope.launch {
-            repository.initializeDummyPorts()
+            worldRepository.initializeDummyPorts()
         }
     }
 
-    // 모든 항구 리스트
-    val allPorts: StateFlow<List<com.captain.voyage.data.model.Port>> = repository.allPorts
+    // 모든 항구 리스트 (World)
+    val allPorts: StateFlow<List<com.captain.voyage.data.model.Port>> = worldRepository.allPorts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 선박 정보 (위치 포함)
-    val ship: StateFlow<com.captain.voyage.data.model.Ship?> = repository.ship
+    // 선박 정보 (위치 포함) (Core)
+    val ship: StateFlow<com.captain.voyage.data.model.Ship?> = voyageRepository.ship
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // 모든 룰 (커스텀 목표 설정 시 선택용)
-    val allRules: StateFlow<List<Rule>> = repository.allRules
+    // 모든 룰 (커스텀 목표 설정 시 선택용) (Core)
+    val allRules: StateFlow<List<Rule>> = voyageRepository.allRules
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 모든 목표 + 각 목표별 진행도(Progress) 결합
-    val goalsUiState: StateFlow<List<GoalUiState>> = repository.allGoals
+    // 모든 목표 + 각 목표별 진행도(Progress) 결합 (Goal)
+    val goalsUiState: StateFlow<List<GoalUiState>> = goalRepository.allGoals
         .flatMapLatest { goals ->
             if (goals.isEmpty()) {
                 flowOf(emptyList())
             } else {
                 // 각 Goal에 대해 getGoalProgress Flow를 결합
                 val progressFlows = goals.map { goal ->
-                    repository.getGoalProgress(goal).map { score ->
+                    goalRepository.getGoalProgress(goal).map { score ->
                         val current = score ?: 0
                         val ratio = if (goal.targetScore > 0) current.toFloat() / goal.targetScore else 0f
                         GoalUiState(goal, current, ratio.coerceIn(0f, 1f))
@@ -68,18 +72,18 @@ class GoalsViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // --- 지도 상호작용 ---
+    // --- 지도 상호작용 (Core) ---
     fun setDestination(x: Float, y: Float) {
         viewModelScope.launch {
-            repository.setDestination(x, y)
+            voyageRepository.setDestination(x, y)
         }
     }
 
-    // --- 목표 생성/수정 ---
+    // --- 목표 생성/수정 (Goal) ---
 
     fun addOrUpdateGoal(
         type: GoalType,
-        title: String = "", // Added
+        title: String = "",
         targetScore: Int,
         startDate: String? = null,
         endDate: String? = null,
@@ -95,10 +99,6 @@ class GoalsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            // DAILY, WEEKLY, MONTHLY는 타입별로 하나만 존재해야 함 (기존 것 덮어쓰기 로직 필요할 수 있음)
-            // 여기서는 id가 0이면 새로 만들지만, 이미 있으면 업데이트.
-            // *Daily 목표는 앱 켜질 때 없으면 만드는 로직이 어딘가 있어야 함. (일단 여기서는 수정만)
-            
             val goal = Goal(
                 id = existingGoalId,
                 title = if (title.isBlank()) type.name else title,
@@ -108,13 +108,13 @@ class GoalsViewModel @Inject constructor(
                 endDate = end,
                 linkedRuleIds = ruleIds
             )
-            repository.saveGoal(goal)
+            goalRepository.saveGoal(goal)
         }
     }
 
     fun deleteGoal(goal: Goal) {
         viewModelScope.launch {
-            repository.deleteGoal(goal)
+            goalRepository.deleteGoal(goal)
         }
     }
 

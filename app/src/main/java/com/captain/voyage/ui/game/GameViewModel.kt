@@ -5,16 +5,19 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.captain.voyage.data.model.Item
-import com.captain.voyage.data.model.Market
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.ShipStatus
+import com.captain.voyage.data.repository.DailyBriefing
+import com.captain.voyage.data.repository.GoalRepository
+import com.captain.voyage.data.repository.SettlementRepository
+import com.captain.voyage.data.repository.TradeRepository
 import com.captain.voyage.data.repository.VoyageRepository
+import com.captain.voyage.data.repository.WorldRepository
 import com.captain.voyage.ui.trade.MarketItemUi
-import com.captain.voyage.utils.GameConstants // Added
+import com.captain.voyage.utils.GameConstants
 import com.captain.voyage.utils.TimeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job // Added
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,22 +32,25 @@ import kotlin.math.sqrt
 
 @HiltViewModel
 class GameViewModel @Inject constructor(
-    private val repository: VoyageRepository
+    private val voyageRepository: VoyageRepository,
+    private val tradeRepository: TradeRepository,
+    private val worldRepository: WorldRepository,
+    private val settlementRepository: SettlementRepository,
+    private val goalRepository: GoalRepository
 ) : ViewModel() {
 
     // Market Flow Job
     private var marketDataJob: Job? = null
 
-    // 1. 실시간 데이터 관찰
-    val ship = repository.ship.asLiveData()
-    val userStatus = repository.userStatus.asLiveData()
+    // 1. 실시간 데이터 관찰 (Core)
+    val ship = voyageRepository.ship.asLiveData()
+    val userStatus = voyageRepository.userStatus.asLiveData()
     
-    // [New] 지도 표시를 위한 모든 항구 리스트
-    val allPorts = repository.allPorts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // [New] 지도 표시를 위한 모든 항구 리스트 (World)
+    val allPorts = worldRepository.allPorts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     
     // 현재 항구 감지 (반경 50.0 이내)
-    // 항구에 도착했다면 해당 Port 객체를 반환, 아니면 null
-    val currentPort = combine(repository.ship, repository.allPorts) { ship, ports ->
+    val currentPort = combine(voyageRepository.ship, worldRepository.allPorts) { ship, ports ->
         if (ship == null) return@combine null
         ports.find { port ->
             val dx = port.posX - ship.posX
@@ -62,8 +68,8 @@ class GameViewModel @Inject constructor(
     val toastMessage: LiveData<String> get() = _toastMessage
 
     // 3. 아침 점호 (브리핑) 상태
-    private val _briefingData = MutableStateFlow<com.captain.voyage.data.repository.DailyBriefing?>(null)
-    val briefingData: StateFlow<com.captain.voyage.data.repository.DailyBriefing?> = _briefingData.asStateFlow()
+    private val _briefingData = MutableStateFlow<DailyBriefing?>(null)
+    val briefingData: StateFlow<DailyBriefing?> = _briefingData.asStateFlow()
 
     private val _showBriefing = MutableStateFlow(false)
     val showBriefing: StateFlow<Boolean> = _showBriefing.asStateFlow()
@@ -86,36 +92,36 @@ class GameViewModel @Inject constructor(
     private val _inventoryItems = MutableStateFlow<List<InventoryItemUi>>(emptyList())
     val inventoryItems: StateFlow<List<InventoryItemUi>> = _inventoryItems.asStateFlow()
 
-    // [New] 로그북 데이터 지원
-    val allRules = repository.allRules.asLiveData()
+    // [New] 로그북 데이터 지원 (VoyageRepo -> Core Rule)
+    val allRules = voyageRepository.allRules.asLiveData()
 
-    // [New] 직접 데이터 조회 (로그북용)
+    // [New] 직접 데이터 조회 (로그북용) -> GoalRepo
     suspend fun getRecordsDirect(date: String): List<com.captain.voyage.data.model.ScoreRecord> {
-        return repository.getScoreRecordsByDate(date).first()
+        return goalRepository.getScoreRecordsByDate(date).first()
     }
 
     // [New] 일괄 저장 및 정박 연계
     fun saveBatchRecords(date: String, records: List<com.captain.voyage.data.model.ScoreRecord>) {
         viewModelScope.launch {
-            // 1. 기존 삭제
-            val oldRecords = repository.getScoreRecordsByDate(date).first()
-            oldRecords.forEach { repository.deleteScoreRecord(it) }
+            // 1. 기존 삭제 (GoalRepo)
+            val oldRecords = goalRepository.getScoreRecordsByDate(date).first()
+            oldRecords.forEach { goalRepository.deleteScoreRecord(it) }
 
-            // 2. 신규 저장
+            // 2. 신규 저장 (GoalRepo)
             var totalScore = 0
             records.forEach { 
-                repository.insertScoreRecord(it)
+                goalRepository.insertScoreRecord(it)
                 totalScore += it.score
             }
 
-            // 3. 로그 업데이트
+            // 3. 로그 업데이트 (GoalRepo)
             val log = com.captain.voyage.data.model.DailyLog(date = date, totalScore = totalScore)
-            repository.updateDailyLog(log)
+            goalRepository.updateDailyLog(log)
 
-            // 4. 정박 프로세스 중이면 정박 실행
-            if (repository.isDockingProcess) {
-                repository.dockShip()
-                repository.isDockingProcess = false // 프로세스 초기화
+            // 4. 정박 프로세스 중이면 정박 실행 (VoyageRepo)
+            if (voyageRepository.isDockingProcess) {
+                voyageRepository.dockShip()
+                voyageRepository.isDockingProcess = false // 프로세스 초기화
                 _toastMessage.value = "⚓ 일지 작성 및 정박 완료!"
             } else {
                 _toastMessage.value = "일지가 저장되었습니다."
@@ -126,10 +132,11 @@ class GameViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             try {
-                // [추가] 항구 데이터 초기화 (초기화 후 섬이 사라지는 문제 해결)
-                repository.initializeDummyPorts()
+                // [추가] 데이터 초기화
+                worldRepository.initializeDummyPorts()
+                tradeRepository.initializeTradeData() // 분리된 초기화 호출
 
-                val currentShip = repository.ship.first()
+                val currentShip = voyageRepository.ship.first()
                 if (currentShip == null) {
                     val defaultShip = Ship(
                         id = 1,
@@ -141,10 +148,10 @@ class GameViewModel @Inject constructor(
                         posX = 50.0,
                         posY = 50.0
                     )
-                    repository.saveShip(defaultShip)
+                    voyageRepository.saveShip(defaultShip)
                 } else {
                     if (currentShip.status == ShipStatus.SAILING) {
-                        repository.startVoyage()
+                        voyageRepository.startVoyage()
                     }
                 }
             } catch (e: Exception) {
@@ -167,8 +174,8 @@ class GameViewModel @Inject constructor(
         marketDataJob?.cancel()
         
         marketDataJob = viewModelScope.launch {
-            // 해당 항구의 마켓 데이터 구독 시작
-            repository.getMarketDataFlow(portId).collect { list ->
+            // 해당 항구의 마켓 데이터 구독 시작 (TradeRepo)
+            tradeRepository.getMarketDataFlow(portId).collect { list ->
                 val uiItems = list.map { (market, item, qty) ->
                     MarketItemUi(item, market, qty)
                 }
@@ -184,7 +191,7 @@ class GameViewModel @Inject constructor(
 
     fun buyItem(itemUi: MarketItemUi, quantity: Int) {
         viewModelScope.launch {
-            val currentQty = repository.buyItem(itemUi.item.id, itemUi.market.buyPrice, quantity)
+            val currentQty = tradeRepository.buyItem(itemUi.item.id, itemUi.market.buyPrice, quantity)
             if (currentQty != -1) {
                 _toastMessage.value = "${itemUi.item.name} 구매 완료! (보유: ${currentQty}개)"
             } else {
@@ -195,7 +202,7 @@ class GameViewModel @Inject constructor(
 
     fun sellItem(itemUi: MarketItemUi, quantity: Int) {
         viewModelScope.launch {
-            val success = repository.sellItem(itemUi.item.id, itemUi.market.sellPrice, quantity)
+            val success = tradeRepository.sellItem(itemUi.item.id, itemUi.market.sellPrice, quantity)
             if (success) {
                 _toastMessage.value = "${itemUi.item.name} 판매 완료!"
             } else {
@@ -207,7 +214,7 @@ class GameViewModel @Inject constructor(
     // [New] 인벤토리 -> 식량 창고 이동
     fun loadSupply(itemId: Long) {
         viewModelScope.launch {
-            val resultMsg = repository.loadSupplyToShip(itemId)
+            val resultMsg = tradeRepository.loadSupplyToShip(itemId)
             _toastMessage.value = resultMsg
         }
     }
@@ -225,13 +232,13 @@ class GameViewModel @Inject constructor(
 
     // [New] 정박 전 로그북 작성 요청
     fun openLogbookForDocking() {
-        repository.isDockingProcess = true
+        voyageRepository.isDockingProcess = true
     }
 
     // [New] 정박 확정 (바로 정박)
     fun confirmDocking() {
         viewModelScope.launch {
-            repository.dockShip()
+            voyageRepository.dockShip()
         }
     }
 
@@ -254,13 +261,13 @@ class GameViewModel @Inject constructor(
                      return@launch
                 }
                 
-                val resultMsg = repository.moveShipTowardDestination()
+                val resultMsg = voyageRepository.moveShipTowardDestination()
                 _toastMessage.value = resultMsg
                 return@launch
             }
             
-            // 2. 잔여 거리가 없으면, 오늘 점호를 받았는지 확인
-            val hasBriefed = repository.hasBriefedToday()
+            // 2. 잔여 거리가 없으면, 오늘 점호를 받았는지 확인 (GoalRepo)
+            val hasBriefed = goalRepository.hasBriefedToday()
             if (hasBriefed) {
                 _toastMessage.value = "🌙 오늘의 항해력을 모두 소모했습니다. 내일 다시 출항하세요!"
                 return@launch
@@ -272,7 +279,7 @@ class GameViewModel @Inject constructor(
                  return@launch
             }
 
-            val data = repository.getYesterdayBriefing()
+            val data = goalRepository.getYesterdayBriefing()
             _briefingData.value = data
             _showBriefing.value = true
         }
@@ -285,11 +292,14 @@ class GameViewModel @Inject constructor(
             
             val finalSuccess = data.isSuccess && !hasConfessed
             
-            // 1. 점호 정산 및 연료 충전
-            val chargeMsg = repository.confirmDailyBriefing(isSuccess = finalSuccess)
+            // 1. 점호 정산 및 연료 충전 (Core)
+            val chargeMsg = voyageRepository.confirmDailyBriefing(isSuccess = finalSuccess)
+            
+            // 1.1 로그 생성 (GoalRepo) - Core에서 제거되었으므로 여기서 호출
+            goalRepository.createTodayLog()
 
-            // 2. 즉시 출항 (이동)
-            val moveMsg = repository.moveShipTowardDestination()
+            // 2. 즉시 출항 (이동) (Core)
+            val moveMsg = voyageRepository.moveShipTowardDestination()
 
             val statusMsg = when {
                 hasConfessed -> "🚨 규율 위반 처리됨"
@@ -316,14 +326,14 @@ class GameViewModel @Inject constructor(
     // --- 지도 상호작용 ---
     fun setDestination(x: Float, y: Float) {
         viewModelScope.launch {
-            repository.setDestination(x, y)
+            voyageRepository.setDestination(x, y)
         }
     }
 
     // --- 인벤토리 ---
     fun openInventory() {
         viewModelScope.launch {
-            repository.getInventoryFlow().collect { list ->
+            tradeRepository.getInventoryFlow().collect { list ->
                 _inventoryItems.value = list.map { (item, qty) ->
                     InventoryItemUi(item, qty)
                 }

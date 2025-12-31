@@ -46,3 +46,24 @@ dz # ✅ Tasks Checklist
 ### 2.3. Ship Upgrade
 - [ ] [DB] 선박 업그레이드 테이블/컬럼 추가
 - [ ] [UI] 조선소(Shipyard) 화면 구현
+
+---
+
+## 3. 🌊 Phase 5: Narrative & World Expansion (신규 계획)
+PRD 확장에 따른 스토리 및 세계관 확장 작업.
+
+### 3.1. Narrative Foundation
+- [ ] [Design] 메인 스토리라인 및 오픈 엔딩 시나리오 설계
+- [ ] [DB] NPC 테이블 설계 (ID, 이름, 호감도, 소속, 상태 등)
+- [ ] [DB] 대화(Dialogue) 시스템 데이터 구조 설계
+- [ ] [Impl] NPC 상호작용 시스템 기초 (대화창 UI 및 로직)
+
+### 3.2. World Expansion
+- [ ] [Design] 확장된 맵 그리드 및 바이옴(Biomes) 속성 정의
+- [ ] [Impl] 맵 타일링 시스템 개선 (대규모 맵 렌더링 최적화)
+- [ ] [Impl] 환경 효과(안개, 눈, 폭풍우) 시각적 피드백 추가
+
+### 3.3. Dynamic Events
+- [ ] [Logic] 무작위 인카운터 엔진 (이벤트 발생 확률 및 조건 제어)
+- [ ] [Content] 기초 이벤트 5종 구현 (폭풍, 보물, 조난, 상인, 해적)
+- [ ] [Impl] NPC 퀘스트 시스템 기초 구현

@@ -3,6 +3,7 @@ package com.captain.voyage.ui.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.captain.voyage.data.repository.GoalRepository
 import com.captain.voyage.data.repository.VoyageRepository
 import com.captain.voyage.utils.NotificationHelper
 import com.captain.voyage.utils.TimeManager
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 
@@ -27,14 +29,14 @@ data class SettingsState(
     val isQuietHoursEnabled: Boolean = false,
     val quietStartTime: String = "23:00",
     val quietEndTime: String = "07:00",
-    // [New] 하이브리드 팝업 설정
     val isOverlayEnabled: Boolean = false
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val repository: VoyageRepository
+    private val voyageRepository: VoyageRepository,
+    private val goalRepository: GoalRepository
 ) : ViewModel() {
 
     private val PREF_NAME = "voyage_settings"
@@ -153,7 +155,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
     
-    // [New] 오버레이 설정 업데이트
     fun updateOverlaySetting(isEnabled: Boolean) {
         prefs.edit().putBoolean(KEY_OVERLAY_ENABLED, isEnabled).apply()
         _uiState.update {
@@ -182,8 +183,13 @@ class SettingsViewModel @Inject constructor(
 
     fun cheatResetDaily(onResult: (String) -> Unit) {
         viewModelScope.launch {
-            val msg = repository.resetDailyStatus()
-            onResult(msg)
+            // 1. 로그 삭제 (GoalRepo)
+            val today = LocalDate.now().toString()
+            goalRepository.deleteDailyLogByDate(today)
+            
+            // 2. 선박 리셋 (VoyageRepo)
+            val msg = voyageRepository.resetShipStatus()
+            onResult("🔄 오늘 하루 리셋 완료! (로그 삭제 + $msg)")
         }
     }
 }

@@ -84,16 +84,47 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideTradeRepository(
+        tradeDao: com.captain.voyage.data.local.TradeDao,
+        voyageDao: VoyageDao
+    ): com.captain.voyage.data.repository.TradeRepository {
+        return com.captain.voyage.data.repository.TradeRepository(tradeDao, voyageDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWorldRepository(
+        portDao: com.captain.voyage.data.local.PortDao
+    ): com.captain.voyage.data.repository.WorldRepository {
+        return com.captain.voyage.data.repository.WorldRepository(portDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSettlementRepository(
+        settlementDao: com.captain.voyage.data.local.SettlementDao,
+        portDao: com.captain.voyage.data.local.PortDao,
+        voyageDao: VoyageDao
+    ): com.captain.voyage.data.repository.SettlementRepository {
+        return com.captain.voyage.data.repository.SettlementRepository(settlementDao, portDao, voyageDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGoalRepository(
+        goalDao: GoalDao,
+        scoreRecordDao: ScoreRecordDao,
+        dailyLogDao: DailyLogDao
+    ): com.captain.voyage.data.repository.GoalRepository {
+        return com.captain.voyage.data.repository.GoalRepository(goalDao, scoreRecordDao, dailyLogDao)
+    }
+
+    @Provides
+    @Singleton
     fun provideVoyageRepository(
         voyageDao: VoyageDao,
-        scoreRecordDao: ScoreRecordDao,
-        dailyLogDao: DailyLogDao,
-        goalDao: GoalDao,
-        portDao: com.captain.voyage.data.local.PortDao,
-        tradeDao: com.captain.voyage.data.local.TradeDao,
-        settlementDao: com.captain.voyage.data.local.SettlementDao, // Added
         appScope: CoroutineScope
     ): VoyageRepository {
-        return VoyageRepository(voyageDao, scoreRecordDao, dailyLogDao, goalDao, portDao, tradeDao, settlementDao, appScope)
+        return VoyageRepository(voyageDao, appScope)
     }
 }

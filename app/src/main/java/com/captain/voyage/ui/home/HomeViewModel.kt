@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.model.DailyLog
 import com.captain.voyage.data.model.GoalType
 import com.captain.voyage.data.model.ScoreRecord
+import com.captain.voyage.data.repository.GoalRepository
 import com.captain.voyage.data.repository.VoyageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.first // [필수 추가] 
+import kotlinx.coroutines.flow.first 
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -27,7 +28,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: VoyageRepository
+    private val voyageRepository: VoyageRepository,
+    private val goalRepository: GoalRepository
 ) : ViewModel() {
 
     // 오늘 날짜 (고정)
@@ -41,8 +43,8 @@ class HomeViewModel @Inject constructor(
     private val _displayDate = MutableStateFlow("")
     val displayDate: StateFlow<String> = _displayDate.asStateFlow()
 
-    // 목표 점수 (GoalType.DAILY 목표의 targetScore를 실시간으로 관찰)
-    val targetScore: StateFlow<Int> = repository.allGoals
+    // 목표 점수 (GoalType.DAILY 목표의 targetScore를 실시간으로 관찰) -> GoalRepo
+    val targetScore: StateFlow<Int> = goalRepository.allGoals
         .map { goals ->
             goals.find { it.type == GoalType.DAILY }?.targetScore ?: 100 // 없으면 기본 100
         }
@@ -57,9 +59,9 @@ class HomeViewModel @Inject constructor(
         _displayDate.value = displayFormat.format(Date())
     }
     
-    // [New] 화면 진입 시 정박 프로세스 체크 (GameActivity에서 돌아왔을 때)
+    // [New] 화면 진입 시 정박 프로세스 체크 (GameActivity에서 돌아왔을 때) -> VoyageRepo
     fun checkDockingProcess() {
-        if (repository.isDockingProcess) {
+        if (voyageRepository.isDockingProcess) {
             triggerLogbookPopup()
         }
     }
@@ -81,27 +83,28 @@ class HomeViewModel @Inject constructor(
     }
 
     // 2. 데이터 관찰
-    val todayLog = repository.getLiveDailyLog(_todayDate).asLiveData()
+    val todayLog = goalRepository.getLiveDailyLog(_todayDate).asLiveData()
 
     val selectedDateRecords: LiveData<List<ScoreRecord>> = _selectedDate.switchMap { date ->
-        repository.getScoreRecordsByDate(date).asLiveData()
+        goalRepository.getScoreRecordsByDate(date).asLiveData()
     }
 
-    val allRules = repository.allRules.asLiveData()
+    // Core
+    val allRules = voyageRepository.allRules.asLiveData()
 
     // [추가] 일회용 데이터 직접 조회 (DB에서 현재 상태를 즉시 가져옴)
     suspend fun getRecordsDirect(targetDate: String): List<ScoreRecord> {
-        return repository.getScoreRecordsByDate(targetDate).first()
+        return goalRepository.getScoreRecordsByDate(targetDate).first()
     }
 
     // [추가] 해당 날짜의 로그 존재 여부 확인 (출항 여부 체크용)
     suspend fun isLogExists(targetDate: String): Boolean {
-        return repository.getDailyLogDirect(targetDate) != null
+        return goalRepository.getDailyLogDirect(targetDate) != null
     }
 
-    // [추가] 현재 선박이 항해 중인지 확인
+    // [추가] 현재 선박이 항해 중인지 확인 (Core)
     suspend fun isShipSailing(): Boolean {
-        val currentShip = repository.ship.first()
+        val currentShip = voyageRepository.ship.first()
         return currentShip?.status == com.captain.voyage.data.model.ShipStatus.SAILING
     }
 
@@ -118,7 +121,7 @@ class HomeViewModel @Inject constructor(
                 note = "",
                 isCustom = ruleId == null // ruleId가 없으면 완전 커스텀 입력
             )
-            repository.insertScoreRecord(newRecord)
+            goalRepository.insertScoreRecord(newRecord)
             updateTotalScore(targetDate, score)
         }
     }
@@ -127,46 +130,46 @@ class HomeViewModel @Inject constructor(
     fun saveBatchRecords(targetDate: String, newRecords: List<ScoreRecord>) {
         viewModelScope.launch {
             // 1. 해당 날짜의 기존 세부 내역을 모두 지웁니다.
-            val oldRecords = repository.getScoreRecordsByDate(targetDate).first()
-            oldRecords.forEach { repository.deleteScoreRecord(it) }
+            val oldRecords = goalRepository.getScoreRecordsByDate(targetDate).first()
+            oldRecords.forEach { goalRepository.deleteScoreRecord(it) }
 
             // 2. 새로운 내역들을 하나씩 저장합니다.
             var totalScore = 0
             newRecords.forEach { 
-                repository.insertScoreRecord(it)
+                goalRepository.insertScoreRecord(it)
                 totalScore += it.score
             }
 
             // 3. 일일 합계 점수를 한 번에 업데이트합니다.
             val log = DailyLog(date = targetDate, totalScore = totalScore)
-            repository.updateDailyLog(log)
+            goalRepository.updateDailyLog(log)
             
             // [Fix] 데이터 갱신 후 화면 강제 새로고침
             _currentMonth.value = _currentMonth.value
             
-            // [New] 정박 프로세스 중이었다면, 저장 후 정박 실행
-            if (repository.isDockingProcess) {
-                repository.dockShip()
+            // [New] 정박 프로세스 중이었다면, 저장 후 정박 실행 (Core)
+            if (voyageRepository.isDockingProcess) {
+                voyageRepository.dockShip()
             }
         }
     }
 
     fun deleteRecord(record: ScoreRecord) {
         viewModelScope.launch {
-            repository.deleteScoreRecord(record)
+            goalRepository.deleteScoreRecord(record)
             updateTotalScore(record.date, -record.score)
         }
     }
 
     private suspend fun updateTotalScore(targetDate: String, deltaScore: Int) {
-        val currentLog = repository.getDailyLogDirect(targetDate)
+        val currentLog = goalRepository.getDailyLogDirect(targetDate)
             ?: DailyLog(date = targetDate, totalScore = 0)
 
         val updatedLog = currentLog.copy(
             totalScore = currentLog.totalScore + deltaScore
         )
         
-        repository.updateDailyLog(updatedLog)
+        goalRepository.updateDailyLog(updatedLog)
         
         // [Fix] 데이터 갱신 후 화면 강제 새로고침
         _currentMonth.value = _currentMonth.value
@@ -179,7 +182,7 @@ class HomeViewModel @Inject constructor(
 
     val monthlyLogs: StateFlow<List<DailyLog>> = _currentMonth
         .flatMapLatest { yearMonth ->
-            repository.getMonthlyLogs("$yearMonth%")
+            goalRepository.getMonthlyLogs("$yearMonth%")
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

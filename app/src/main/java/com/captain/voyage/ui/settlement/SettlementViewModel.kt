@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.model.Building
 import com.captain.voyage.data.model.BuildingType
 import com.captain.voyage.data.model.Settlement
+import com.captain.voyage.data.repository.SettlementRepository
 import com.captain.voyage.data.repository.VoyageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,26 +27,27 @@ data class SettlementUiState(
 
 @HiltViewModel
 class SettlementViewModel @Inject constructor(
-    private val repository: VoyageRepository
+    private val voyageRepository: VoyageRepository,
+    private val settlementRepository: SettlementRepository
 ) : ViewModel() {
 
     // 현재 선택된 항구 ID (UI에서 설정)
     private val _currentPortId = MutableStateFlow<Long?>(null)
 
-    // 정착지 정보 스트림
+    // 정착지 정보 스트림 (SettlementRepo)
     private val settlementFlow = _currentPortId.flatMapLatest { portId ->
         if (portId == null) flowOf(null)
-        else repository.getSettlement(portId)
+        else settlementRepository.getSettlement(portId)
     }
 
-    // 건물 목록 스트림
+    // 건물 목록 스트림 (SettlementRepo)
     private val buildingsFlow = settlementFlow.flatMapLatest { settlement ->
         if (settlement == null) flowOf(emptyList())
-        else repository.getBuildings(settlement.id)
+        else settlementRepository.getBuildings(settlement.id)
     }
     
-    // 유저 골드 정보
-    private val userGoldFlow = repository.userStatus.flatMapLatest { 
+    // 유저 골드 정보 (Core)
+    private val userGoldFlow = voyageRepository.userStatus.flatMapLatest { 
         flowOf(it?.gold ?: 0L)
     }
 
@@ -76,7 +78,7 @@ class SettlementViewModel @Inject constructor(
 
     fun foundSettlement(portId: Long, name: String) {
         viewModelScope.launch {
-            val result = repository.foundSettlement(portId, name)
+            val result = settlementRepository.foundSettlement(portId, name)
             if (result != "Success") {
                 _uiMessage.value = result
             } else {
@@ -87,7 +89,7 @@ class SettlementViewModel @Inject constructor(
 
     fun constructBuilding(settlementId: Long, type: BuildingType) {
         viewModelScope.launch {
-            val result = repository.constructBuilding(settlementId, type)
+            val result = settlementRepository.constructBuilding(settlementId, type)
             if (result != "Success") {
                 _uiMessage.value = result
             } else {
