@@ -106,7 +106,11 @@ object WorldData {
     // Note: I will add more ports later if needed to reach exactly 25, but this is the core set.
 
     fun isLand(x: Double, y: Double): Boolean {
-        return landmasses.any { shape ->
+        return getCollidingLand(x, y) != null
+    }
+
+    fun getCollidingLand(x: Double, y: Double): LandShape.Circle? {
+        return landmasses.firstOrNull { shape ->
             when (shape) {
                 is LandShape.Circle -> {
                     val dx = x - shape.centerX
@@ -114,7 +118,7 @@ object WorldData {
                     sqrt(dx * dx + dy * dy) <= shape.radius
                 }
             }
-        }
+        } as? LandShape.Circle
     }
 
     fun getInitialMarkets(): List<Market> {

@@ -166,31 +166,48 @@ class VoyageRepository(
             val tryX = currX + dxNorm * move
             val tryY = currY + dyNorm * move
             
-            if (!WorldData.isLand(tryX, tryY)) {
-                // 1. 대각선 이동 성공
+            val collidingLand = WorldData.getCollidingLand(tryX, tryY)
+            
+            if (collidingLand == null) {
+                // 1. 이동 성공
                 currX = tryX
                 currY = tryY
             } else {
-                // 2. 충돌! 축별 이동 시도 (Sliding)
-                val tryXOnly = currX + dxNorm * move
-                val tryYOnly = currY + dyNorm * move
+                // 2. 충돌! 물리 기반 슬라이딩 (Vector Projection)
+                // 육지 중심에서 배를 향하는 법선 벡터(Normal Vector) 계산
+                val normalX = currX - collidingLand.centerX
+                val normalY = currY - collidingLand.centerY
+                val normalLen = sqrt(normalX * normalX + normalY * normalY)
                 
-                val canMoveX = !WorldData.isLand(tryXOnly, currY)
-                val canMoveY = !WorldData.isLand(currX, tryYOnly)
-                
-                if (canMoveX && !canMoveY) {
-                    currX = tryXOnly
-                } else if (!canMoveX && canMoveY) {
-                    currY = tryYOnly
-                } else if (canMoveX && canMoveY) {
-                    // 모서리 상황: 더 많이 이동하는 축 선택
-                    if (kotlin.math.abs(dxNorm) > kotlin.math.abs(dyNorm)) {
-                        currX = tryXOnly
+                if (normalLen > 0) {
+                    val nx = normalX / normalLen
+                    val ny = normalY / normalLen
+                    
+                    // 이동 벡터(Move)
+                    val vx = dxNorm * move
+                    val vy = dyNorm * move
+                    
+                    // Move 벡터를 Normal에 투영 (Dot Product) -> 벽을 미는 힘
+                    val dot = vx * nx + vy * ny
+                    
+                    // Move에서 벽을 미는 힘을 제거 -> 벽을 타고 흐르는 힘(Slide)
+                    // Slide = V - (V dot N) * N
+                    val slideX = vx - dot * nx
+                    val slideY = vy - dot * ny
+                    
+                    // 슬라이딩 적용한 위치
+                    val slideTryX = currX + slideX
+                    val slideTryY = currY + slideY
+                    
+                    // 슬라이딩 위치가 안전한지 재확인 (2차 충돌 방지)
+                    if (!WorldData.isLand(slideTryX, slideTryY)) {
+                        currX = slideTryX
+                        currY = slideTryY
                     } else {
-                        currY = tryYOnly
+                        // 슬라이딩 해도 막히면 멈춤 (구석에 낌)
+                        isStuck = true
                     }
                 } else {
-                    // 꽉 막힘 -> 시뮬레이션 종료
                     isStuck = true
                 }
             }
