@@ -86,6 +86,10 @@ class WorldRepository @Inject constructor(
             
             // 3. Markets
             tradeDao.insertMarkets(WorldData.getInitialMarkets())
+            
+            // [Release] Pre-reveal important areas
+            revealArea(0.0, 400.0, 500.0) // 시작의 항구 주변
+            revealArea(1000.0, 8200.0, 500.0) // 가라앉은 암초 (정착지) 주변
         }
     }
 

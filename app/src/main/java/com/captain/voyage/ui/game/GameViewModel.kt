@@ -174,7 +174,7 @@ class GameViewModel @Inject constructor(
                 val currentUser = voyageRepository.userStatus.first()
                 if (currentUser == null) {
                     val defaultUser = UserStatus(
-                        gold = 1000L // 초기 자금
+                        gold = 5000L // [Release] Initial Gold 5000
                     )
                     voyageRepository.saveUserStatus(defaultUser)
                 }
