@@ -49,7 +49,7 @@ class VoyageRepositoryTest {
         settlementDao = mock()
         
         repository = VoyageRepository(
-            voyageDao, scoreRecordDao, dailyLogDao, goalDao, portDao, tradeDao, settlementDao,
+            voyageDao,
             CoroutineScope(mainDispatcherRule.testDispatcher)
         )
     }

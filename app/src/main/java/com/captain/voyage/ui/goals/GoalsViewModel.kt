@@ -53,6 +53,10 @@ class GoalsViewModel @Inject constructor(
     val allRules: StateFlow<List<Rule>> = voyageRepository.allRules
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // 탐험된 영역 데이터 (World)
+    val exploredChunks: StateFlow<Set<Pair<Int, Int>>> = worldRepository.exploredChunks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
     // 모든 목표 + 각 목표별 진행도(Progress) 결합 (Goal)
     val goalsUiState: StateFlow<List<GoalUiState>> = goalRepository.allGoals
         .flatMapLatest { goals ->

@@ -38,7 +38,7 @@ import com.captain.voyage.data.model.ExploredMapEntity // Added
         Building::class,
         ExploredMapEntity::class // Added
     ],
-    version = 23, // Version up for test release v1 (initial gold & map reveal)
+    version = 24, // Adjusted starting position next to port
     exportSchema = false
 )
 @TypeConverters(Converters::class) // 기존 번역가 유지

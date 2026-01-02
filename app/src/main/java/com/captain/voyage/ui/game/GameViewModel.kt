@@ -160,8 +160,8 @@ class GameViewModel @Inject constructor(
                         exp = 0,
                         skinId = "0",
                         status = ShipStatus.ANCHORED,
-                        posX = 0.0,
-                        posY = 400.0 // Adjusted to match Beginner's Bay
+                        posX = 50.0,
+                        posY = 300.0 // Right next to Beginner's Bay (0, 300)
                     )
                     voyageRepository.saveShip(defaultShip)
                 } else {

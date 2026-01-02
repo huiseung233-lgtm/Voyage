@@ -108,7 +108,7 @@ object WorldData {
         Port(id = 23, name = "상어 지느러미 항", posX = 3500.0, posY = 0.0, hasMarket = true),
         Port(id = 24, name = "돌고래만", posX = -3500.0, posY = 0.0, hasMarket = true),
 
-        Port(id = 25, name = "시작의 항구", posX = 0.0, posY = 250.0, hasShipyard = true, hasTavern = true, hasMarket = true)
+        Port(id = 25, name = "시작의 항구", posX = 0.0, posY = 300.0, hasShipyard = true, hasTavern = true, hasMarket = true)
     )
 
     fun isLand(x: Double, y: Double): Boolean {

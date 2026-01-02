@@ -111,6 +111,7 @@ fun GoalsScreen(
         ) {
             val ports by viewModel.allPorts.collectAsState()
             val ship by viewModel.ship.collectAsState()
+            val exploredChunks by viewModel.exploredChunks.collectAsState()
 
             // Map Paper Effect
             Box(
@@ -128,7 +129,8 @@ fun GoalsScreen(
                     ship = ship,
                     isReadOnly = true,
                     initialZoom = 0.5f,
-                    isPaperMap = true // [New] Enable Paper Theme
+                    isPaperMap = true, // [New] Enable Paper Theme
+                    exploredChunks = exploredChunks
                 )
                 
                 // Old Paper Texture Overlay (Optional subtle noise/gradient could be added here)
