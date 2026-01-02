@@ -50,6 +50,10 @@ class GameViewModel @Inject constructor(
     // [New] 지도 표시를 위한 모든 항구 리스트 (World)
     val allPorts = worldRepository.allPorts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     
+    // [New] 탐험된 청크 데이터 (안개 걷기용)
+    val exploredChunks = worldRepository.exploredChunks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
     // 현재 항구 감지 (반경 50.0 이내)
     val currentPort = combine(voyageRepository.ship, worldRepository.allPorts) { ship, ports ->
         if (ship == null) return@combine null
@@ -134,8 +138,18 @@ class GameViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // [추가] 데이터 초기화
-                worldRepository.initializeDummyPorts()
+                worldRepository.initializeWorld()
                 tradeRepository.initializeTradeData() // 분리된 초기화 호출
+
+                // [New] 선박 위치 변화 관찰 -> 안개 제거 연결
+                launch {
+                    voyageRepository.ship.collect { currentShip ->
+                        currentShip?.let {
+                            // 반경 500 (5타일) 밝히기
+                            worldRepository.revealArea(it.posX, it.posY, 500.0)
+                        }
+                    }
+                }
 
                 val currentShip = voyageRepository.ship.first()
                 if (currentShip == null) {

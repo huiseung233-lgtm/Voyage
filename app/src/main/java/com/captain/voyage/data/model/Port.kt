@@ -12,5 +12,8 @@ data class Port(
     val posX: Double,
     val posY: Double,
     val isDiscovered: Boolean = false,
-    val canEstablishSettlement: Boolean = false // 정착지 건설 가능 지역 여부
+    val canEstablishSettlement: Boolean = false, // 정착지 건설 가능 지역 여부
+    val hasShipyard: Boolean = false,
+    val hasTavern: Boolean = false,
+    val hasMarket: Boolean = false
 )

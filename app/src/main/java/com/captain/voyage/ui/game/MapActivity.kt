@@ -31,6 +31,7 @@ class MapActivity : AppCompatActivity() {
         setContent {
             val ship by viewModel.ship.observeAsState()
             val allPorts by viewModel.allPorts.collectAsState()
+            val exploredChunks by viewModel.exploredChunks.collectAsState()
 
             Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                 WorldMapView(
@@ -38,7 +39,8 @@ class MapActivity : AppCompatActivity() {
                     ship = ship,
                     isReadOnly = false,
                     isPaperMap = false,
-                    onMapClick = { x, y -> viewModel.setDestination(x, y) }
+                    onMapClick = { x, y -> viewModel.setDestination(x, y) },
+                    exploredChunks = exploredChunks
                 )
                 
                 IconButton(

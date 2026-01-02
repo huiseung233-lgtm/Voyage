@@ -1,5 +1,6 @@
 package com.captain.voyage.data.repository
 
+import com.captain.voyage.data.initial.WorldData
 import com.captain.voyage.data.local.VoyageDao
 import com.captain.voyage.data.model.Rule
 import com.captain.voyage.data.model.Ship
@@ -84,9 +85,6 @@ class VoyageRepository(
     suspend fun setDestination(targetX: Float, targetY: Float) {
         val currentShip = voyageDao.getShip().first() ?: return
         
-        // [Changed] Snap to port logic moved to ViewModel/WorldRepository interaction.
-        // Repository just saves the raw destination.
-        
         val updatedShip = currentShip.copy(
             destX = targetX.toDouble(),
             destY = targetY.toDouble()
@@ -94,12 +92,10 @@ class VoyageRepository(
         saveShip(updatedShip)
     }
 
-    // [Changed] 이름 변경: settleDailySailing -> confirmDailyBriefing
-    // 이제 이 함수는 배를 이동시키지 않고, '운항 가능 거리(remainingDistance)'만 충전합니다.
     suspend fun confirmDailyBriefing(isSuccess: Boolean): String {
         val currentShip = voyageDao.getShip().first() ?: return "선박 정보 없음"
         
-        // 1. 하루치 유지비(식량) 소모 (정박 중에도 밥은 먹으니까)
+        // 1. 하루치 유지비(식량) 소모
         val dailyCost = GameConstants.SUPPLY_CONSUMPTION_DAILY
         if (currentShip.supplies < dailyCost) {
             val driftShip = currentShip.copy(status = ShipStatus.ANCHORED)
@@ -110,8 +106,6 @@ class VoyageRepository(
 
         // 2. 이동 거리(연료) 충전
         val rechargeAmount = if (isSuccess) GameConstants.DAILY_MOVE_SUCCESS else GameConstants.DAILY_MOVE_FAIL
-        
-        // 기존 잔여량은 초기화(하루 단위 갱신)하거나 더해줄 수 있음. 여기서는 "오늘의 에너지"로 교체(Replace)
         val newRemainingDistance = rechargeAmount
 
         val updatedShip = currentShip.copy(
@@ -138,15 +132,15 @@ class VoyageRepository(
         }
 
         // 목적지까지 거리 계산
-        val dx = currentShip.destX - currentShip.posX
-        val dy = currentShip.destY - currentShip.posY
+        val dx = currentShip.destX!! - currentShip.posX
+        val dy = currentShip.destY!! - currentShip.posY
         val totalDistToDest = sqrt(dx * dx + dy * dy)
 
         if (totalDistToDest < GameConstants.ARRIVAL_THRESHOLD) {
              return "이미 목적지에 도착해 있습니다."
         }
 
-        // 실제 이동 거리 결정 (남은 연료 vs 목적지 거리 중 작은 것)
+        // 실제 이동 거리 결정
         val actualMoveDist = if (totalDistToDest <= maxDist) totalDistToDest else maxDist
         
         // 좌표 계산
@@ -156,30 +150,43 @@ class VoyageRepository(
         var newDestY: Double? = currentShip.destY
         var newStatus = ShipStatus.SAILING
         var message = ""
+        var collisionOccurred = false
 
         if (totalDistToDest <= maxDist) {
             // 목적지 도착 가능
-            newX = currentShip.destX
-            newY = currentShip.destY
-            newDestX = null
-            newDestY = null
-            newStatus = ShipStatus.ANCHORED // 도착했으므로 정박
-            message = "⚓ 목적지 도착 완료! (이동: ${actualMoveDist.toInt()}km)"
+            newX = currentShip.destX!!
+            newY = currentShip.destY!!
+            
+            // [Collision Check]
+            if (WorldData.isLand(newX, newY)) {
+                collisionOccurred = true
+            } else {
+                newDestX = null
+                newDestY = null
+                newStatus = ShipStatus.ANCHORED
+                message = "⚓ 목적지 도착 완료! (이동: ${actualMoveDist.toInt()}km)"
+            }
         } else {
-            // 가다가 멈춤 (연료 소진)
+            // 가다가 멈춤
             newX = currentShip.posX + (dx / totalDistToDest) * actualMoveDist
             newY = currentShip.posY + (dy / totalDistToDest) * actualMoveDist
-            // [Fix] 바다 위에서는 정박하지 않고 항해 상태 유지 (SAILING)
-            newStatus = ShipStatus.SAILING 
-            message = "🌊 순항 중... 오늘의 운항 종료. (이동: ${actualMoveDist.toInt()}km, 남은 거리: ${(totalDistToDest - actualMoveDist).toInt()}km)"
+            
+            // [Collision Check]
+            if (WorldData.isLand(newX, newY)) {
+                collisionOccurred = true
+            } else {
+                newStatus = ShipStatus.SAILING 
+                message = "🌊 순항 중... 오늘의 운항 종료. (이동: ${actualMoveDist.toInt()}km, 남은 거리: ${(totalDistToDest - actualMoveDist).toInt()}km)"
+            }
+        }
+        
+        if (collisionOccurred) {
+            return "⛔ 전방에 육지가 있어 이동할 수 없습니다! 항로를 변경하세요."
         }
         
         // 잔여 거리 차감
         val newRemainingDist = maxDist - actualMoveDist
         
-        // [Optional] 이동 중 식량 추가 소모? (일단 점호 때 깠으니 여기선 패스, 혹은 이동 거리 비례 소모 가능)
-        // 여기서는 무료로 이동 (이미 점호 때 냄)
-
         val updatedShip = currentShip.copy(
             posX = newX,
             posY = newY,
@@ -197,12 +204,10 @@ class VoyageRepository(
         if (sailingJob?.isActive == true) return
 
         sailingJob = externalScope.launch {
-            // [Changed] 실시간 식량 소모 로직 제거 (일일 정산으로 이동)
             while (isActive) {
                 delay(1000L)
                 val currentShip = voyageDao.getShip().first() ?: break
                 if (currentShip.status != ShipStatus.SAILING) break
-                // 상태 모니터링만 유지
             }
         }
     }
@@ -212,20 +217,11 @@ class VoyageRepository(
         sailingJob = null
     }
 
-    // [Cheat] 오늘 하루 초기화 (다시 점호 받기 위함) -> Reset logic partially needs GoalRepo? 
-    // Wait, resetDailyStatus deleted dailyLog. That belongs to GoalRepo.
-    // However, it also resets Ship status.
-    // Ideally, this cheat function should be in ViewModel calling both Repos.
-    // Or keep it here but only reset Ship, and let ViewModel reset Log via GoalRepo.
-    // Let's remove the Log deletion part from here to be pure Core.
-    
     suspend fun resetShipStatus(): String {
-        // dailyLogDao.deleteLogByDate(today) -> REMOVED. ViewModel should call GoalRepo.deleteLog
-        
         val currentShip = voyageDao.getShip().first() ?: return "Ship not found"
         val resetShip = currentShip.copy(
             remainingDistance = 0.0,
-            supplies = currentShip.maxSupplies // 식량도 가득!
+            supplies = currentShip.maxSupplies
         )
         saveShip(resetShip)
         

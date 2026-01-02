@@ -93,10 +93,18 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideExploredMapDao(db: VoyageDatabase): com.captain.voyage.data.local.ExploredMapDao {
+        return db.exploredMapDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideWorldRepository(
-        portDao: com.captain.voyage.data.local.PortDao
+        portDao: com.captain.voyage.data.local.PortDao,
+        tradeDao: com.captain.voyage.data.local.TradeDao,
+        exploredMapDao: com.captain.voyage.data.local.ExploredMapDao // Added
     ): com.captain.voyage.data.repository.WorldRepository {
-        return com.captain.voyage.data.repository.WorldRepository(portDao)
+        return com.captain.voyage.data.repository.WorldRepository(portDao, tradeDao, exploredMapDao)
     }
 
     @Provides

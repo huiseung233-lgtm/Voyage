@@ -18,6 +18,7 @@ import com.captain.voyage.data.model.ScoreRecord
 import com.captain.voyage.data.model.Ship
 import com.captain.voyage.data.model.ShipInventory
 import com.captain.voyage.data.model.UserStatus
+import com.captain.voyage.data.model.ExploredMapEntity // Added
 
 // ★ 버전 9로 변경 (Settlement 관련 테이블 추가)
 @Database(
@@ -34,9 +35,10 @@ import com.captain.voyage.data.model.UserStatus
         ShipInventory::class,
         PriceHistory::class,
         Settlement::class,
-        Building::class
+        Building::class,
+        ExploredMapEntity::class // Added
     ],
-    version = 13, // Version up (Ship remaining_distance added)
+    version = 16, // Version up to 16 to force recreation
     exportSchema = false
 )
 @TypeConverters(Converters::class) // 기존 번역가 유지
@@ -50,6 +52,7 @@ abstract class VoyageDatabase : RoomDatabase() {
     abstract fun portDao(): PortDao
     abstract fun tradeDao(): TradeDao
     abstract fun settlementDao(): SettlementDao
+    abstract fun exploredMapDao(): ExploredMapDao // Added
 
     companion object {
         @Volatile

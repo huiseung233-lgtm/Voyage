@@ -6,9 +6,14 @@ object GameConstants {
     const val BUILDING_BASE_COST = 500L
     
     // --- Sailing ---
-    const val DAILY_MOVE_SUCCESS = 100.0
-    const val DAILY_MOVE_FAIL = 50.0
+    const val DAILY_MOVE_SUCCESS = 200.0 // Adjusted Speed
+    const val DAILY_MOVE_FAIL = 100.0
     const val DRIFT_MOVE = 0.0
+
+    // --- World ---
+    const val MAP_SIZE = 20000.0 // -10000 to +10000
+    const val WORLD_MIN = -10000.0
+    const val WORLD_MAX = 10000.0
     
     // --- Navigation ---
     const val PORT_DETECTION_RADIUS = 50.0 // 항구 진입 인정 반경

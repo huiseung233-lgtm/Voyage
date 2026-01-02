@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.captain.voyage.data.repository.GoalRepository
 import com.captain.voyage.data.repository.VoyageRepository
+import com.captain.voyage.data.repository.WorldRepository // Added
 import com.captain.voyage.utils.NotificationHelper
 import com.captain.voyage.utils.TimeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,7 +38,8 @@ data class SettingsState(
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val voyageRepository: VoyageRepository,
-    private val goalRepository: GoalRepository
+    private val goalRepository: GoalRepository,
+    private val worldRepository: WorldRepository // Added
 ) : ViewModel() {
 
     private val PREF_NAME = "voyage_settings"
@@ -204,6 +206,13 @@ class SettingsViewModel @Inject constructor(
             } else {
                 onResult("❌ 유저 정보를 찾을 수 없습니다.")
             }
+        }
+    }
+
+    fun cheatRevealMap(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            worldRepository.revealAllMap()
+            onResult("🗺️ 전 세계의 지도가 밝혀졌습니다!")
         }
     }
 }

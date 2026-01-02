@@ -336,6 +336,20 @@ fun SettingsScreen(
                 ) {
                     Text("💰 [치트] 10만 골드 지급", color = Color.White)
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.cheatRevealMap { msg ->
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                ) {
+                    Text("🗺️ [치트] 지도 전체 밝히기 (안개 제거)", color = Color.White)
+                }
             }
             
             Spacer(modifier = Modifier.height(32.dp))

@@ -1,38 +1,91 @@
 package com.captain.voyage.data.repository
 
+import com.captain.voyage.data.initial.WorldData
+import com.captain.voyage.data.local.ExploredMapDao
 import com.captain.voyage.data.local.PortDao
+import com.captain.voyage.data.local.TradeDao
+import com.captain.voyage.data.model.ExploredMapEntity
 import com.captain.voyage.data.model.Port
+import com.captain.voyage.utils.GameConstants // Added import
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.sqrt
 
 @Singleton
 class WorldRepository @Inject constructor(
-    private val portDao: PortDao
+    private val portDao: PortDao,
+    private val tradeDao: TradeDao,
+    private val exploredMapDao: ExploredMapDao
 ) {
 
     val allPorts: Flow<List<Port>> = portDao.getAllPorts()
 
-    suspend fun initializeDummyPorts() {
+    // [New] 안개 데이터 (청크 좌표 셋)
+    val exploredChunks: Flow<Set<Pair<Int, Int>>> = exploredMapDao.getAllExploredChunks()
+        .map { list -> list.map { it.chunkX to it.chunkY }.toSet() }
+
+    fun isLand(x: Double, y: Double): Boolean {
+        return WorldData.isLand(x, y)
+    }
+
+    // [New] 안개 해제 로직
+    suspend fun revealArea(x: Double, y: Double, radius: Double) {
+        val worldChunkSize = 100.0
+        val minChunkX = ((x - radius) / worldChunkSize).toInt()
+        val maxChunkX = ((x + radius) / worldChunkSize).toInt()
+        val minChunkY = ((y - radius) / worldChunkSize).toInt()
+        val maxChunkY = ((y + radius) / worldChunkSize).toInt()
+
+        val newChunks = mutableListOf<ExploredMapEntity>()
+        for (cx in minChunkX..maxChunkX) {
+            for (cy in minChunkY..maxChunkY) {
+                // 반경 체크 (정확한 원형 해제를 위해)
+                val chunkCenterX = cx * worldChunkSize + worldChunkSize / 2
+                val chunkCenterY = cy * worldChunkSize + worldChunkSize / 2
+                val dx = chunkCenterX - x
+                val dy = chunkCenterY - y
+                if (sqrt(dx * dx + dy * dy) <= radius + (worldChunkSize / 2)) {
+                    newChunks.add(ExploredMapEntity(cx, cy))
+                }
+            }
+        }
+        
+        if (newChunks.isNotEmpty()) {
+            exploredMapDao.insertChunks(newChunks)
+        }
+    }
+
+    suspend fun revealAllMap() {
+        val worldChunkSize = 100.0
+        val minIdx = (GameConstants.WORLD_MIN / worldChunkSize).toInt()
+        val maxIdx = (GameConstants.WORLD_MAX / worldChunkSize).toInt()
+        
+        val allChunks = mutableListOf<ExploredMapEntity>()
+        for (cx in minIdx..maxIdx) {
+            for (cy in minIdx..maxIdx) {
+                allChunks.add(ExploredMapEntity(cx, cy))
+            }
+        }
+        exploredMapDao.insertChunks(allChunks)
+    }
+
+    suspend fun initializeWorld() {
         val currentPorts = portDao.getAllPorts().first()
         if (currentPorts.isEmpty()) {
-            val dummyPorts = listOf(
-                Port(id = 1, name = "시작의 항구", description = "모든 여행이 시작되는 곳", posX = 100.0, posY = 100.0),
-                Port(id = 2, name = "희망의 섬", description = "풍부한 자원이 잠들어 있는 섬", posX = 800.0, posY = 400.0),
-                Port(id = 3, name = "거친 파도 항구", description = "숙련된 선원들만 머무는 곳", posX = 300.0, posY = 1200.0),
-                // [New] 정착지 건설 가능한 신대륙 본토 (맵 하단)
-                Port(
-                    id = 4, 
-                    name = "신대륙 전초기지", 
-                    description = "미지의 대륙으로 통하는 관문. 정착지를 건설하기 적합하다.", 
-                    posX = 500.0, 
-                    posY = 1600.0, // 맵 하단 배치
-                    canEstablishSettlement = true
-                )
-            )
-            portDao.insertPorts(dummyPorts)
+            // 1. Ports
+            portDao.insertPorts(WorldData.ports)
+            
+            // 2. Items
+            val currentItems = tradeDao.getAllItems().first()
+            if (currentItems.isEmpty()) {
+                tradeDao.insertItems(WorldData.items)
+            }
+            
+            // 3. Markets
+            tradeDao.insertMarkets(WorldData.getInitialMarkets())
         }
     }
 

@@ -37,7 +37,7 @@ class GoalsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            worldRepository.initializeDummyPorts()
+            worldRepository.initializeWorld()
         }
     }
 

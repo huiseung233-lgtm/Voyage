@@ -37,8 +37,11 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.captain.voyage.data.initial.LandShape
+import com.captain.voyage.data.initial.WorldData
 import com.captain.voyage.data.model.Port
 import com.captain.voyage.data.model.Ship
+import com.captain.voyage.utils.GameConstants
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -77,8 +80,9 @@ fun WorldMapView(
     ship: Ship?,
     isReadOnly: Boolean = false,
     initialZoom: Float = 1f,
-    isPaperMap: Boolean = false, // Added parameter
-    onMapClick: ((Float, Float) -> Unit)? = null
+    isPaperMap: Boolean = false,
+    onMapClick: ((Float, Float) -> Unit)? = null,
+    exploredChunks: Set<Pair<Int, Int>> = emptySet() // [New] Fog Data
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -215,21 +219,92 @@ fun WorldMapView(
             val camY = manualOffset.y
 
             scale(scale = zoomScale, pivot = Offset(cx, cy)) {
-                val worldMin = -5000f
-                val worldMax = 5000f
-                val gridSize = 60.dp.toPx()
+                val worldMin = GameConstants.WORLD_MIN.toFloat()
+                val worldMax = GameConstants.WORLD_MAX.toFloat()
+                val gridSize = 100.dp.toPx()
 
-                // Grid
+                // 1. Grid
                 for (x in worldMin.toInt()..worldMax.toInt() step gridSize.toInt()) {
                     val screenX = x + camX
-                    drawLine(theme.gridColor, Offset(screenX, 0f), Offset(screenX, height), strokeWidth = 1f / zoomScale, pathEffect = gridPathEffect)
+                    drawLine(theme.gridColor, Offset(screenX, worldMin + camY), Offset(screenX, worldMax + camY), strokeWidth = 1f / zoomScale, pathEffect = gridPathEffect)
                 }
                 for (y in worldMin.toInt()..worldMax.toInt() step gridSize.toInt()) {
                     val screenY = y + camY
-                    drawLine(theme.gridColor, Offset(0f, screenY), Offset(width, screenY), strokeWidth = 1f / zoomScale, pathEffect = gridPathEffect)
+                    drawLine(theme.gridColor, Offset(worldMin + camX, screenY), Offset(worldMax + camX, screenY), strokeWidth = 1f / zoomScale, pathEffect = gridPathEffect)
                 }
 
-                // Route
+                // 2. Landmasses (New)
+                WorldData.landmasses.forEach { shape ->
+                    when (shape) {
+                        is LandShape.Circle -> {
+                            val centerX = shape.centerX.toFloat() + camX
+                            val centerY = shape.centerY.toFloat() + camY
+                            val radius = shape.radius.toFloat()
+                            val landColor = if (isPaperMap) Color(0xFF8B7355) else Color(0xFF2E7D32)
+                            drawCircle(
+                                color = landColor,
+                                radius = radius,
+                                center = Offset(centerX, centerY)
+                            )
+                        }
+                    }
+                }
+
+                // [New] Fog of War Layer
+                val worldChunkSize = 100.0 // 월드 좌표상 청크 크기
+                
+                // 1. 현재 화면에 보이는 월드 좌표 범위 계산 (줌 고려)
+                val worldViewWidth = width / zoomScale
+                val worldViewHeight = height / zoomScale
+                
+                // 화면 중앙(cx, cy)의 월드 좌표: cx - camX
+                val worldCenterX = cx - camX
+                val worldCenterY = cy - camY
+                
+                val worldLeft = worldCenterX - (worldViewWidth / 2)
+                val worldRight = worldCenterX + (worldViewWidth / 2)
+                val worldTop = worldCenterY - (worldViewHeight / 2)
+                val worldBottom = worldCenterY + (worldViewHeight / 2)
+
+                // 2. 보이는 범위 내의 청크 인덱스 계산
+                val minChunkX = (worldLeft / worldChunkSize).toInt() - 1
+                val maxChunkX = (worldRight / worldChunkSize).toInt() + 1
+                val minChunkY = (worldTop / worldChunkSize).toInt() - 1
+                val maxChunkY = (worldBottom / worldChunkSize).toInt() + 1
+
+                for (cx_idx in minChunkX..maxChunkX) {
+                    for (cy_idx in minChunkY..maxChunkY) {
+                        // 탐험되지 않은 청크라면 검은색 덮기
+                        if (!exploredChunks.contains(cx_idx to cy_idx)) {
+                            // scale 블록 안이므로 월드 좌표 + camX 만 해주면 됨
+                            val drawX = (cx_idx * worldChunkSize).toFloat() + camX
+                            val drawY = (cy_idx * worldChunkSize).toFloat() + camY
+                            
+                            drawRect(
+                                color = Color.Black.copy(alpha = 0.98f),
+                                topLeft = Offset(drawX, drawY),
+                                size = androidx.compose.ui.geometry.Size(worldChunkSize.toFloat(), worldChunkSize.toFloat())
+                            )
+                        }
+                    }
+                }
+
+                // 3. Map Boundary (Red Line)
+                val borderMin = worldMin + camX
+                val borderMax = worldMax + camX
+                val borderTop = worldMin + camY
+                val borderBottom = worldMax + camY
+                
+                // Top
+                drawLine(Color.Red, Offset(borderMin, borderTop), Offset(borderMax, borderTop), strokeWidth = 10f / zoomScale)
+                // Bottom
+                drawLine(Color.Red, Offset(borderMin, borderBottom), Offset(borderMax, borderBottom), strokeWidth = 10f / zoomScale)
+                // Left
+                drawLine(Color.Red, Offset(borderMin, borderTop), Offset(borderMin, borderBottom), strokeWidth = 10f / zoomScale)
+                // Right
+                drawLine(Color.Red, Offset(borderMax, borderTop), Offset(borderMax, borderBottom), strokeWidth = 10f / zoomScale)
+
+                // 4. Route
                 ship?.let {
                     if (it.destX != null && it.destY != null) {
                         val start = Offset(it.posX.toFloat() + camX, it.posY.toFloat() + camY)
