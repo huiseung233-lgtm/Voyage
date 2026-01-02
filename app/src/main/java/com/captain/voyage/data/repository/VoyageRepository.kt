@@ -148,17 +148,16 @@ class VoyageRepository(
         var remainingStepDist = actualMoveDist
         var currX = currentShip.posX
         var currY = currentShip.posY
-        var isStuck = false
+        var hitLand = false
         
-        while (remainingStepDist > 0 && !isStuck) {
+        while (remainingStepDist > 0) {
             val move = if (remainingStepDist > stepSize) stepSize else remainingStepDist
             
-            // 현재 위치에서 목적지까지의 벡터 재계산 (우회하면서 방향이 바뀔 수 있으므로)
             val dxStep = currentShip.destX!! - currX
             val dyStep = currentShip.destY!! - currY
             val distStep = sqrt(dxStep * dxStep + dyStep * dyStep)
             
-            if (distStep < 0.1) break // 도착 간주
+            if (distStep < 0.1) break 
             
             val dxNorm = dxStep / distStep
             val dyNorm = dyStep / distStep
@@ -166,56 +165,15 @@ class VoyageRepository(
             val tryX = currX + dxNorm * move
             val tryY = currY + dyNorm * move
             
-            val collidingLand = WorldData.getCollidingLand(tryX, tryY)
-            
-            if (collidingLand == null) {
-                // 1. 이동 성공
+            if (!WorldData.isLand(tryX, tryY)) {
+                // 이동 가능: 좌표 갱신
                 currX = tryX
                 currY = tryY
-            } else {
-                // 2. 충돌! 물리 기반 슬라이딩 (Vector Projection)
-                // 육지 중심에서 배를 향하는 법선 벡터(Normal Vector) 계산
-                val normalX = currX - collidingLand.centerX
-                val normalY = currY - collidingLand.centerY
-                val normalLen = sqrt(normalX * normalX + normalY * normalY)
-                
-                if (normalLen > 0) {
-                    val nx = normalX / normalLen
-                    val ny = normalY / normalLen
-                    
-                    // 이동 벡터(Move)
-                    val vx = dxNorm * move
-                    val vy = dyNorm * move
-                    
-                    // Move 벡터를 Normal에 투영 (Dot Product) -> 벽을 미는 힘
-                    val dot = vx * nx + vy * ny
-                    
-                    // Move에서 벽을 미는 힘을 제거 -> 벽을 타고 흐르는 힘(Slide)
-                    // Slide = V - (V dot N) * N
-                    val slideX = vx - dot * nx
-                    val slideY = vy - dot * ny
-                    
-                    // [Fix] Push out slightly along normal to avoid sticking to the surface
-                    val pushOut = 1.0 // 1 unit push
-                    val slideTryX = currX + slideX + (nx * pushOut)
-                    val slideTryY = currY + slideY + (ny * pushOut)
-                    
-                    // 슬라이딩 위치가 안전한지 재확인 (2차 충돌 방지)
-                    if (!WorldData.isLand(slideTryX, slideTryY)) {
-                        currX = slideTryX
-                        currY = slideTryY
-                    } else {
-                        // 그래도 막히면 더 강하게 밀어내보기 (Optional)
-                        // 이번엔 그냥 멈춤
-                        isStuck = true
-                    }
-                } else {
-                    isStuck = true
-                }
-            }
-            
-            if (!isStuck) {
                 remainingStepDist -= move
+            } else {
+                // 육지 발견: 즉시 중단
+                hitLand = true
+                break
             }
         }
         // --- Stepwise Simulation End ---
@@ -227,7 +185,10 @@ class VoyageRepository(
         var newStatus = ShipStatus.SAILING
         var message = ""
 
-        // 최종 도착 여부 확인
+        // 최종 이동 거리 계산
+        val totalMoved = actualMoveDist - remainingStepDist
+
+        // 목적지 도착 체크
         val distToDest = sqrt((newX - currentShip.destX!!)*(newX - currentShip.destX!!) + (newY - currentShip.destY!!)*(newY - currentShip.destY!!))
         
         if (distToDest < GameConstants.ARRIVAL_THRESHOLD) {
@@ -236,19 +197,19 @@ class VoyageRepository(
              newDestX = null
              newDestY = null
              newStatus = ShipStatus.ANCHORED
-             message = "⚓ 목적지 도착 완료! (이동: ${(actualMoveDist - remainingStepDist).toInt()}km)"
+             message = "⚓ 목적지 도착 완료! (이동: ${totalMoved.toInt()}km)"
         } else {
-             if (isStuck) {
-                 message = "⛔ 육지에 가로막혀 이동을 멈췄습니다. (이동: ${(actualMoveDist - remainingStepDist).toInt()}km)"
+             if (hitLand) {
+                 message = "⛔ 전방에 육지가 있어 멈췄습니다. (이동: ${totalMoved.toInt()}km)"
+                 newStatus = ShipStatus.ANCHORED // 육지에 닿았으니 정지
+                 newDestX = null // 경로 초기화
+                 newDestY = null
              } else {
                  message = "🌊 순항 중... 오늘의 운항 종료. (남은 거리: ${distToDest.toInt()}km)"
              }
         }
         
-        // 잔여 거리 차감 (실제 이동한 만큼만 차감 or 시도한 만큼 차감? 여기선 시도한 만큼)
-        // 하지만 Stuck인 경우 억울하니까 실제 이동 거리 기반으로 계산
-        val finalMoved = actualMoveDist - remainingStepDist
-        val newRemainingDist = (maxDist - finalMoved).coerceAtLeast(0.0)
+        val newRemainingDist = (maxDist - totalMoved).coerceAtLeast(0.0)
         
         val updatedShip = currentShip.copy(
             posX = newX,
