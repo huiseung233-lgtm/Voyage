@@ -42,16 +42,6 @@ class MapActivity : AppCompatActivity() {
                     onMapClick = { x, y -> viewModel.setDestination(x, y) },
                     exploredChunks = exploredChunks
                 )
-                
-                IconButton(
-                    onClick = { finish() },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .background(Color.White.copy(alpha = 0.8f), CircleShape)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = "Close Map")
-                }
             }
         }
     }

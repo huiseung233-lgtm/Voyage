@@ -6,8 +6,8 @@ object GameConstants {
     const val BUILDING_BASE_COST = 500L
     
     // --- Sailing ---
-    const val DAILY_MOVE_SUCCESS = 1000.0 // High Speed
-    const val DAILY_MOVE_FAIL = 500.0
+    const val DAILY_MOVE_SUCCESS = 100000.0 // Extreme Speed for testing
+    const val DAILY_MOVE_FAIL = 50000.0
     const val DRIFT_MOVE = 0.0
 
     // --- World ---

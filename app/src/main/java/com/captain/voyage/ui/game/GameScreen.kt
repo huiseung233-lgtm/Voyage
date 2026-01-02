@@ -237,17 +237,6 @@ fun GameScreen(
                 }
             }
 
-            // 2. Exit Button (Top Right)
-            IconButton(
-                onClick = onExit,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.TopEnd)
-                    .background(Color(0xFFFFCCBC), CircleShape)
-            ) {
-                Icon(Icons.Default.Close, contentDescription = "Exit", tint = Color(0xFFBF360C))
-            }
-
             // 3. Shop & Settlement & Inventory Buttons
             Box(
                 modifier = Modifier

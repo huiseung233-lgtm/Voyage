@@ -316,26 +316,32 @@ fun WorldMapView(
                     }
                 }
 
-                // Ports
+                // Ports (Only draw if explored)
                 ports.forEach { port ->
-                    val px = port.posX.toFloat() + camX
-                    val py = port.posY.toFloat() + camY
-                    val center = Offset(px, py)
-                    drawCircle(theme.portColor.copy(alpha = 0.3f), radius = 12.dp.toPx(), center = center)
-                    drawCircle(theme.portColor, radius = 6.dp.toPx(), center = center)
-                    val textLayout = textMeasurer.measure(
-                        text = port.name,
-                        style = TextStyle(color = theme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    )
-                    // 배경 사각형 없이 텍스트만 (깔끔하게) - 또는 반투명 배경
-                    if (!isPaperMap) {
-                         drawRect(
-                            color = Color.Black.copy(alpha = 0.5f),
-                            topLeft = Offset(px + 10.dp.toPx(), py - 12.dp.toPx()),
-                            size = androidx.compose.ui.geometry.Size(textLayout.size.width.toFloat() + 8f, textLayout.size.height.toFloat() + 4f)
+                    val worldChunkSize = 100.0
+                    val portChunkX = (port.posX / worldChunkSize).toInt()
+                    val portChunkY = (port.posY / worldChunkSize).toInt()
+                    
+                    // Check if port is in explored chunk
+                    if (exploredChunks.contains(portChunkX to portChunkY)) {
+                        val px = port.posX.toFloat() + camX
+                        val py = port.posY.toFloat() + camY
+                        val center = Offset(px, py)
+                        drawCircle(theme.portColor.copy(alpha = 0.3f), radius = 12.dp.toPx(), center = center)
+                        drawCircle(theme.portColor, radius = 6.dp.toPx(), center = center)
+                        val textLayout = textMeasurer.measure(
+                            text = port.name,
+                            style = TextStyle(color = theme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         )
+                        if (!isPaperMap) {
+                             drawRect(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                topLeft = Offset(px + 10.dp.toPx(), py - 12.dp.toPx()),
+                                size = androidx.compose.ui.geometry.Size(textLayout.size.width.toFloat() + 8f, textLayout.size.height.toFloat() + 4f)
+                            )
+                        }
+                        drawText(textLayoutResult = textLayout, topLeft = Offset(px + 14.dp.toPx(), py - 10.dp.toPx()))
                     }
-                    drawText(textLayoutResult = textLayout, topLeft = Offset(px + 14.dp.toPx(), py - 10.dp.toPx()))
                 }
 
                 // Ship
@@ -383,7 +389,7 @@ fun WorldMapView(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp)
+                    .padding(end = 16.dp, bottom = 64.dp) // [Fix] Increased bottom padding
                     .background(Color.White, CircleShape)
                     .size(48.dp)
             ) {

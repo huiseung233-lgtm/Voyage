@@ -13,97 +13,103 @@ sealed class LandShape {
 
 object WorldData {
 
-    // 1. Items
+    // 1. 아이템 (무역품)
     val items = listOf(
-        Item(id = 1, name = "Grain", basePrice = 10, description = "Basic food staple.", type = ItemType.FOOD, effectValue = 10),
-        Item(id = 2, name = "Fish", basePrice = 15, description = "Freshly caught fish.", type = ItemType.FOOD, effectValue = 15),
-        Item(id = 3, name = "Wood", basePrice = 20, description = "Timber for construction.", type = ItemType.TRADE_GOOD),
-        Item(id = 4, name = "Stone", basePrice = 25, description = "Heavy stones.", type = ItemType.TRADE_GOOD),
-        Item(id = 5, name = "Iron Ore", basePrice = 40, description = "Raw iron.", type = ItemType.TRADE_GOOD),
-        Item(id = 6, name = "Salt", basePrice = 50, description = "Preservative.", type = ItemType.TRADE_GOOD),
-        Item(id = 7, name = "Tea", basePrice = 60, description = "Aromatic leaves.", type = ItemType.TRADE_GOOD),
-        Item(id = 8, name = "Spices", basePrice = 100, description = "Expensive spices.", type = ItemType.TRADE_GOOD),
-        Item(id = 9, name = "Silk", basePrice = 120, description = "Fine fabric.", type = ItemType.TRADE_GOOD),
-        Item(id = 10, name = "Gold", basePrice = 300, description = "Valuable metal.", type = ItemType.TRADE_GOOD)
+        Item(id = 1, name = "곡물", basePrice = 10, description = "기초 식량입니다.", type = ItemType.FOOD, effectValue = 10),
+        Item(id = 2, name = "생선", basePrice = 15, description = "갓 잡은 신선한 생선입니다.", type = ItemType.FOOD, effectValue = 15),
+        Item(id = 3, name = "목재", basePrice = 20, description = "건축용 목재입니다.", type = ItemType.TRADE_GOOD),
+        Item(id = 4, name = "석재", basePrice = 25, description = "무거운 석재입니다.", type = ItemType.TRADE_GOOD),
+        Item(id = 5, name = "철광석", basePrice = 40, description = "제련용 철광석입니다.", type = ItemType.TRADE_GOOD),
+        Item(id = 6, name = "소금", basePrice = 50, description = "식품 보존에 필수적입니다.", type = ItemType.TRADE_GOOD),
+        Item(id = 7, name = "찻잎", basePrice = 60, description = "향긋한 찻잎입니다.", type = ItemType.TRADE_GOOD),
+        Item(id = 8, name = "향신료", basePrice = 100, description = "귀한 향신료입니다.", type = ItemType.TRADE_GOOD),
+        Item(id = 9, name = "비단", basePrice = 120, description = "부드럽고 비싼 옷감입니다.", type = ItemType.TRADE_GOOD),
+        Item(id = 10, name = "황금", basePrice = 300, description = "매우 가치 있는 금속입니다.", type = ItemType.TRADE_GOOD)
     )
 
-    // 2. Topology (Continents and Islands)
+    // 2. 지형 (대륙 및 섬)
     val landmasses = listOf(
-        // West Continent (Cluster of circles)
+        // 서쪽 대륙
         LandShape.Circle(-8000.0, 0.0, 1500.0),
         LandShape.Circle(-8500.0, 1000.0, 1200.0),
         LandShape.Circle(-8500.0, -1000.0, 1200.0),
 
-        // East Continent (Cluster of circles)
+        // 동쪽 대륙
         LandShape.Circle(8000.0, 0.0, 1500.0),
         LandShape.Circle(8500.0, 1200.0, 1000.0),
         LandShape.Circle(8500.0, -1200.0, 1000.0),
 
-        // Mid-size Lands
-        LandShape.Circle(0.0, 4000.0, 800.0),   // North Mid
-        LandShape.Circle(0.0, -4000.0, 800.0),  // South Mid
-        LandShape.Circle(2000.0, 1000.0, 600.0), // Center Right
-        LandShape.Circle(-2000.0, -1000.0, 600.0), // Center Left
+        // 중간 크기 땅
+        LandShape.Circle(0.0, 4000.0, 800.0),   
+        LandShape.Circle(0.0, -4000.0, 800.0),  
+        LandShape.Circle(2000.0, 1000.0, 600.0), 
+        LandShape.Circle(-2000.0, -1000.0, 600.0), 
 
-        // Scattered Small Islands
+        // 흩어진 작은 섬들
         LandShape.Circle(-4000.0, 6000.0, 300.0),
         LandShape.Circle(4000.0, -6000.0, 300.0),
         LandShape.Circle(6000.0, 6000.0, 350.0),
         LandShape.Circle(-6000.0, -6000.0, 350.0),
         LandShape.Circle(1000.0, 8500.0, 250.0),
         LandShape.Circle(-1000.0, -8500.0, 250.0),
-        LandShape.Circle(-9000.0, 9000.0, 400.0), // Northwest far island
-        LandShape.Circle(9000.0, -9000.0, 400.0), // Southeast far island
-        LandShape.Circle(0.0, 0.0, 200.0) // Small starter island in the center
+        LandShape.Circle(-9000.0, 9000.0, 400.0), 
+        LandShape.Circle(9000.0, -9000.0, 400.0), 
+        LandShape.Circle(0.0, 0.0, 200.0) 
     )
 
-    // 3. Ports
+    // 3. 항구 (25개)
     val ports = listOf(
-        // West Continent Ports
-        Port(id = 1, name = "Westia North", posX = -7500.0, posY = 1700.0, hasShipyard = true, hasTavern = true, hasMarket = true), // Moved out
-        Port(id = 2, name = "Westia South", posX = -7500.0, posY = -1700.0, hasMarket = true), // Moved out
+        // 서쪽 대륙 항구 (Y>0 is Bottom in Canvas -> South, Y<0 is Top -> North)
+        // Westia North (Top) -> Y should be negative. Was 1700 (Bottom). Swap name to South.
+        // Requested: Westia "North" (actually at bottom) -> Move SE (X+, Y+). 
+        // Let's just fix the names based on visual position (Top=North, Bottom=South).
         
-        // East Continent Ports
-        Port(id = 3, name = "Eastia Main", posX = 6300.0, posY = 0.0, hasShipyard = true, hasTavern = true, hasMarket = true), // Moved closer to coast
-        Port(id = 4, name = "Eastia North", posX = 7800.0, posY = 2600.0, hasMarket = true), // Moved out
+        // Old Westia North (Y=1700, Bottom) -> Rename to Westia South. Move SE -> (-7800, 1900)
+        Port(id = 1, name = "웨스티아 남항", posX = -7800.0, posY = 1900.0, hasShipyard = true, hasTavern = true, hasMarket = true),
+        
+        // Old Westia South (Y=-1700, Top) -> Rename to Westia North. Move NE -> (-7800, -1900)
+        Port(id = 2, name = "웨스티아 북항", posX = -7800.0, posY = -1900.0, hasMarket = true),
+        
+        Port(id = 11, name = "웨스티아 본항", posX = -9550.0, posY = 0.0, hasShipyard = true, hasTavern = true, hasMarket = true),
+        Port(id = 12, name = "선인장 항구", posX = -9350.0, posY = 1850.0, hasMarket = true),
+        
+        // 동쪽 대륙 항구
+        Port(id = 3, name = "이스티아 본항", posX = 6450.0, posY = 0.0, hasShipyard = true, hasTavern = true, hasMarket = true),
+        
+        // Old Eastia South (Y=-1700, Top) -> Rename to Eastia North. Move NW -> (7800, -1900)
+        Port(id = 9, name = "이스티아 북항", posX = 7800.0, posY = -1900.0, hasMarket = true),
+        
+        // Old Eastia North (Y=2250, Bottom) -> Rename to Eastia South.
+        Port(id = 4, name = "이스티아 남항", posX = 8500.0, posY = 2250.0, hasMarket = true),
+        
+        Port(id = 10, name = "강철 항구", posX = 9550.0, posY = -1200.0, hasShipyard = true, hasMarket = true),
 
-        // Mid-land Ports
-        Port(id = 5, name = "North Junction", posX = 0.0, posY = 2500.0, hasTavern = true, hasMarket = true), // Moved out
-        Port(id = 6, name = "South Junction", posX = 0.0, posY = -2500.0, hasMarket = true), // Moved out
+        // 중간 지역 항구 (Y>0 Bottom -> South, Y<0 Top -> North)
+        Port(id = 5, name = "남부 교차점", posX = 0.0, posY = 3150.0, hasTavern = true, hasMarket = true), 
+        Port(id = 6, name = "북부 교차점", posX = 0.0, posY = -3150.0, hasMarket = true), 
+        Port(id = 13, name = "중앙 우측 선착장", posX = 1350.0, posY = 1000.0, hasMarket = true), 
+        Port(id = 14, name = "중앙 좌측 선착장", posX = -1350.0, posY = -1000.0, hasMarket = true), 
         
-        // Scattered (Fill up to ~25)
-        Port(id = 7, name = "Mist Isle", posX = -4000.0, posY = 5200.0, hasMarket = true),
-        Port(id = 8, name = "Coral Port", posX = 4000.0, posY = -5200.0, hasMarket = true),
+        // 외곽 섬 항구
+        Port(id = 7, name = "안개 섬", posX = -4000.0, posY = 5650.0, hasMarket = true),
+        Port(id = 8, name = "산호 항구", posX = 4000.0, posY = -5650.0, hasMarket = true),
+        Port(id = 15, name = "서리 초소", posX = -1000.0, posY = -8200.0, hasTavern = true, hasMarket = true),
         
-        // East Continent Additional
-        Port(id = 9, name = "Eastia South", posX = 7800.0, posY = -2300.0, hasMarket = true),
-        Port(id = 10, name = "Iron Harbor", posX = 9700.0, posY = 500.0, hasShipyard = true, hasMarket = true),
+        // [특수] 가라앉은 암초 - 정착지 건설 가능
+        Port(id = 16, name = "가라앉은 암초", posX = 1000.0, posY = 8200.0, hasMarket = true, canEstablishSettlement = true),
         
-        // West Continent Additional
-        Port(id = 11, name = "Westia Harbor", posX = -9700.0, posY = 0.0, hasShipyard = true, hasTavern = true, hasMarket = true),
-        Port(id = 12, name = "Cactus Port", posX = -8800.0, posY = 2100.0, hasMarket = true),
+        Port(id = 17, name = "봉우리 항구", posX = 5600.0, posY = 6000.0, hasMarket = true),
+        Port(id = 18, name = "낮은 항구", posX = -5600.0, posY = -6000.0, hasMarket = true),
+        Port(id = 19, name = "북서쪽 끝단", posX = -8550.0, posY = 9000.0, hasMarket = true),
+        Port(id = 20, name = "남동쪽 끝단", posX = 8550.0, posY = -9000.0, hasMarket = true),
         
-        // Mid-size Land Ports
-        Port(id = 13, name = "Center Right Dock", posX = 2000.0, posY = 1700.0, hasMarket = true),
-        Port(id = 14, name = "Center Left Dock", posX = -2000.0, posY = -1700.0, hasMarket = true),
-        
-        // Scattered Small Island Ports
-        Port(id = 15, name = "Frost Outpost", posX = -1000.0, posY = -7900.0, hasTavern = true, hasMarket = true),
-        Port(id = 16, name = "Sunken Reef", posX = 1000.0, posY = 7900.0, hasMarket = true),
-        Port(id = 17, name = "Peak Port", posX = 6000.0, posY = 5200.0, hasMarket = true),
-        Port(id = 18, name = "Low Port", posX = -6000.0, posY = -5800.0, hasMarket = true),
-        Port(id = 19, name = "Northwest Point", posX = -8700.0, posY = 8200.0, hasMarket = true),
-        Port(id = 20, name = "Southeast Point", posX = 8700.0, posY = -8200.0, hasMarket = true),
-        
-        // More scattered
-        Port(id = 21, name = "Whale Bay", posX = 0.0, posY = 6500.0, hasMarket = true),
-        Port(id = 22, name = "Turtle Beach", posX = 0.0, posY = -6500.0, hasMarket = true),
-        Port(id = 23, name = "Shark Fin", posX = 3500.0, posY = 0.0, hasMarket = true),
-        Port(id = 24, name = "Dolphin Cove", posX = -3500.0, posY = 0.0, hasMarket = true),
+        Port(id = 21, name = "고래만", posX = 0.0, posY = 6500.0, hasMarket = true),
+        Port(id = 22, name = "거북이 해변", posX = 0.0, posY = -6500.0, hasMarket = true),
+        Port(id = 23, name = "상어 지느러미 항", posX = 3500.0, posY = 0.0, hasMarket = true),
+        Port(id = 24, name = "돌고래만", posX = -3500.0, posY = 0.0, hasMarket = true),
 
-        Port(id = 25, name = "Beginner's Bay", posX = 0.0, posY = 400.0, hasShipyard = true, hasTavern = true, hasMarket = true) // Moved further out
+        Port(id = 25, name = "시작의 항구", posX = 0.0, posY = 250.0, hasShipyard = true, hasTavern = true, hasMarket = true)
     )
-    // Note: I will add more ports later if needed to reach exactly 25, but this is the core set.
 
     fun isLand(x: Double, y: Double): Boolean {
         return getCollidingLand(x, y) != null
