@@ -195,16 +195,18 @@ class VoyageRepository(
                     val slideX = vx - dot * nx
                     val slideY = vy - dot * ny
                     
-                    // 슬라이딩 적용한 위치
-                    val slideTryX = currX + slideX
-                    val slideTryY = currY + slideY
+                    // [Fix] Push out slightly along normal to avoid sticking to the surface
+                    val pushOut = 1.0 // 1 unit push
+                    val slideTryX = currX + slideX + (nx * pushOut)
+                    val slideTryY = currY + slideY + (ny * pushOut)
                     
                     // 슬라이딩 위치가 안전한지 재확인 (2차 충돌 방지)
                     if (!WorldData.isLand(slideTryX, slideTryY)) {
                         currX = slideTryX
                         currY = slideTryY
                     } else {
-                        // 슬라이딩 해도 막히면 멈춤 (구석에 낌)
+                        // 그래도 막히면 더 강하게 밀어내보기 (Optional)
+                        // 이번엔 그냥 멈춤
                         isStuck = true
                     }
                 } else {
