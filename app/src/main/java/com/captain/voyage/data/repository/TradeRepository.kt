@@ -103,7 +103,7 @@ class TradeRepository @Inject constructor(
         val newSupplies = (currentShip.supplies + addedSupply).coerceAtMost(currentShip.maxSupplies)
 
         val updatedShip = currentShip.copy(supplies = newSupplies)
-        voyageDao.insertShip(updatedShip)
+        voyageDao.updateShip(updatedShip) // [Fix] insertShip -> updateShip
 
         return "보급 완료! +${itemInfo.effectValue} (남은 재고: ${newQty})"
     }

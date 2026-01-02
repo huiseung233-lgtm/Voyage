@@ -39,6 +39,8 @@ Update the file after completing each sub-task, not just after completing an ent
 - [x] 4.0 Map Visualization
   - [x] 4.1 Update `MapComposables.kt` to render landmasses using `WorldData` shapes.
   - [x] 4.2 Update `MapComposables.kt` to implement Fog of War (masking unexplored areas).
-- [ ] 5.0 Verification
-  - [ ] 5.1 Launch app and verify map boundaries and continents are visible.
-  - [ ] 5.2 Test sailing: ensure ship moves fast (2000 speed) and stops at land boundaries.
+- [x] 5.0 Verification
+  - [x] 5.1 Verify Map Size and Continents
+  - [x] 5.2 Verify High Speed and Collision
+  - [x] 5.3 Verify Regional Trade (Specialties/Demands)
+  - [x] 5.4 Verify UI (X-button removal, system bars, re-center button)
