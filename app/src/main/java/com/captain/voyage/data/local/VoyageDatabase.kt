@@ -38,7 +38,7 @@ import com.captain.voyage.data.model.ExploredMapEntity // Added
         Building::class,
         ExploredMapEntity::class // Added
     ],
-    version = 21, // Version up for Port coordinate and name fix
+    version = 22, // Version up for Trade logic update
     exportSchema = false
 )
 @TypeConverters(Converters::class) // 기존 번역가 유지

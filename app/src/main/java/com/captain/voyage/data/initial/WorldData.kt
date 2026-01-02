@@ -130,16 +130,65 @@ object WorldData {
     fun getInitialMarkets(): List<Market> {
         val markets = mutableListOf<Market>()
         val rand = Random(123)
+
         ports.forEach { port ->
-             items.forEach { item ->
-                 markets.add(Market(
-                     portId = port.id,
-                     itemId = item.id,
-                     buyPrice = (item.basePrice * (0.8 + rand.nextDouble() * 0.4)).toInt(),
-                     sellPrice = (item.basePrice * (0.6 + rand.nextDouble() * 0.4)).toInt(),
-                     stock = rand.nextInt(200)
-                 ))
-             }
+            // 지역별 특산품 정의
+            val specialties = mutableListOf<Long>()
+            val demands = mutableListOf<Long>()
+
+            when {
+                // 서쪽 대륙 (광물 풍부)
+                port.posX < -5000 -> {
+                    specialties.addAll(listOf(4L, 5L, 10L)) // 석재, 철광석, 금
+                    demands.addAll(listOf(8L, 9L)) // 향신료, 비단 (사치품 부족)
+                }
+                // 동쪽 대륙 (사치품 풍부)
+                port.posX > 5000 -> {
+                    specialties.addAll(listOf(7L, 8L, 9L)) // 찻잎, 향신료, 비단
+                    demands.addAll(listOf(5L, 10L)) // 철광석, 금 (광물 부족)
+                }
+                // 그 외 (식량, 기초 자원)
+                else -> {
+                    specialties.addAll(listOf(1L, 2L, 3L)) // 곡물, 생선, 목재
+                    // 특별한 수요 없음 (평범)
+                }
+            }
+
+            items.forEach { item ->
+                var baseBuyRate = 1.0
+                var baseSellRate = 1.0
+
+                if (specialties.contains(item.id)) {
+                    // 특산품: 싸게 판다 (0.5 ~ 0.8)
+                    baseBuyRate = 0.5 + rand.nextDouble() * 0.3
+                    baseSellRate = baseBuyRate * 0.8 // 매입가는 더 낮음
+                } else if (demands.contains(item.id)) {
+                    // 수요품: 비싸게 판다 (1.3 ~ 1.8) - 사실상 비싸게 사주는 곳
+                    baseBuyRate = 1.3 + rand.nextDouble() * 0.5
+                    baseSellRate = baseBuyRate * 0.9 
+                } else {
+                    // 일반: (0.9 ~ 1.1)
+                    baseBuyRate = 0.9 + rand.nextDouble() * 0.2
+                    baseSellRate = baseBuyRate * 0.8
+                }
+
+                // 가격 결정
+                val buyPrice = (item.basePrice * baseBuyRate).toInt().coerceAtLeast(1)
+                val sellPrice = (item.basePrice * baseSellRate).toInt().coerceAtLeast(1)
+                
+                // 재고: 특산품은 많고, 수요품은 적음
+                val stock = if (specialties.contains(item.id)) rand.nextInt(300) + 100
+                            else if (demands.contains(item.id)) rand.nextInt(50)
+                            else rand.nextInt(100) + 20
+
+                markets.add(Market(
+                    portId = port.id,
+                    itemId = item.id,
+                    buyPrice = buyPrice,
+                    sellPrice = sellPrice,
+                    stock = stock
+                ))
+            }
         }
         return markets
     }
