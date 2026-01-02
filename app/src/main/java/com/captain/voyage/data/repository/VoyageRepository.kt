@@ -143,82 +143,93 @@ class VoyageRepository(
         // 실제 이동 거리 결정
         val actualMoveDist = if (totalDistToDest <= maxDist) totalDistToDest else maxDist
         
-        // 이동 벡터
-        val moveRatio = actualMoveDist / totalDistToDest
-        val dxMove = dx * moveRatio
-        val dyMove = dy * moveRatio
+        // --- Stepwise Simulation Start ---
+        val stepSize = 10.0 // 10km 단위로 이동 체크
+        var remainingStepDist = actualMoveDist
+        var currX = currentShip.posX
+        var currY = currentShip.posY
+        var isStuck = false
+        
+        while (remainingStepDist > 0 && !isStuck) {
+            val move = if (remainingStepDist > stepSize) stepSize else remainingStepDist
+            
+            // 현재 위치에서 목적지까지의 벡터 재계산 (우회하면서 방향이 바뀔 수 있으므로)
+            val dxStep = currentShip.destX!! - currX
+            val dyStep = currentShip.destY!! - currY
+            val distStep = sqrt(dxStep * dxStep + dyStep * dyStep)
+            
+            if (distStep < 0.1) break // 도착 간주
+            
+            val dxNorm = dxStep / distStep
+            val dyNorm = dyStep / distStep
+            
+            val tryX = currX + dxNorm * move
+            val tryY = currY + dyNorm * move
+            
+            if (!WorldData.isLand(tryX, tryY)) {
+                // 1. 대각선 이동 성공
+                currX = tryX
+                currY = tryY
+            } else {
+                // 2. 충돌! 축별 이동 시도 (Sliding)
+                val tryXOnly = currX + dxNorm * move
+                val tryYOnly = currY + dyNorm * move
+                
+                val canMoveX = !WorldData.isLand(tryXOnly, currY)
+                val canMoveY = !WorldData.isLand(currX, tryYOnly)
+                
+                if (canMoveX && !canMoveY) {
+                    currX = tryXOnly
+                } else if (!canMoveX && canMoveY) {
+                    currY = tryYOnly
+                } else if (canMoveX && canMoveY) {
+                    // 모서리 상황: 더 많이 이동하는 축 선택
+                    if (kotlin.math.abs(dxNorm) > kotlin.math.abs(dyNorm)) {
+                        currX = tryXOnly
+                    } else {
+                        currY = tryYOnly
+                    }
+                } else {
+                    // 꽉 막힘 -> 시뮬레이션 종료
+                    isStuck = true
+                }
+            }
+            
+            if (!isStuck) {
+                remainingStepDist -= move
+            }
+        }
+        // --- Stepwise Simulation End ---
 
-        // 좌표 계산 (충돌 체크 및 슬라이딩)
-        var newX = currentShip.posX
-        var newY = currentShip.posY
+        var newX = currX
+        var newY = currY
         var newDestX: Double? = currentShip.destX
         var newDestY: Double? = currentShip.destY
         var newStatus = ShipStatus.SAILING
         var message = ""
-        
-        // 1. Try moving diagonally (Ideal)
-        val tryX = currentShip.posX + dxMove
-        val tryY = currentShip.posY + dyMove
-        
-        if (!WorldData.isLand(tryX, tryY)) {
-            newX = tryX
-            newY = tryY
-        } else {
-            // Collision detected! Try Sliding.
-            // 2. Try moving X only
-            val tryXOnly = currentShip.posX + dxMove
-            val canMoveX = !WorldData.isLand(tryXOnly, currentShip.posY)
-            
-            // 3. Try moving Y only
-            val tryYOnly = currentShip.posY + dyMove
-            val canMoveY = !WorldData.isLand(currentShip.posX, tryYOnly)
-            
-            if (canMoveX && !canMoveY) {
-                newX = tryXOnly
-                // Y blocked -> Slide along X
-                message = "🚧 육지를 따라 우회합니다. (X축 이동)"
-            } else if (!canMoveX && canMoveY) {
-                newY = tryYOnly
-                // X blocked -> Slide along Y
-                message = "🚧 육지를 따라 우회합니다. (Y축 이동)"
-            } else if (canMoveX && canMoveY) {
-                // Both axes free individually but corner blocked?
-                // Or maybe just pick one? Pick the one with larger progress.
-                if (kotlin.math.abs(dxMove) > kotlin.math.abs(dyMove)) {
-                    newX = tryXOnly
-                } else {
-                    newY = tryYOnly
-                }
-                message = "🚧 육지 모서리를 우회합니다."
-            } else {
-                // Both blocked -> Stuck
-                message = "⛔ 전방이 완전히 막혔습니다!"
-                newStatus = ShipStatus.ANCHORED // Stop
-                newDestX = null
-                newDestY = null
-            }
-        }
 
-        // 목적지 도착 체크
-        if (totalDistToDest <= maxDist && !WorldData.isLand(currentShip.destX!!, currentShip.destY!!)) {
-             // 원래 목적지에 도달 가능한 경우 (그리고 그곳이 육지가 아닌 경우)
-             if (sqrt((newX - currentShip.destX!!)*(newX - currentShip.destX!!) + (newY - currentShip.destY!!)*(newY - currentShip.destY!!)) < GameConstants.ARRIVAL_THRESHOLD) {
-                 newX = currentShip.destX!!
-                 newY = currentShip.destY!!
-                 newDestX = null
-                 newDestY = null
-                 newStatus = ShipStatus.ANCHORED
-                 message = "⚓ 목적지 도착 완료! (이동: ${actualMoveDist.toInt()}km)"
-             }
+        // 최종 도착 여부 확인
+        val distToDest = sqrt((newX - currentShip.destX!!)*(newX - currentShip.destX!!) + (newY - currentShip.destY!!)*(newY - currentShip.destY!!))
+        
+        if (distToDest < GameConstants.ARRIVAL_THRESHOLD) {
+             newX = currentShip.destX!!
+             newY = currentShip.destY!!
+             newDestX = null
+             newDestY = null
+             newStatus = ShipStatus.ANCHORED
+             message = "⚓ 목적지 도착 완료! (이동: ${(actualMoveDist - remainingStepDist).toInt()}km)"
         } else {
-             if (message.isEmpty()) {
-                 message = "🌊 순항 중... 오늘의 운항 종료. (남은 거리: ${(totalDistToDest - actualMoveDist).toInt()}km)"
+             if (isStuck) {
+                 message = "⛔ 육지에 가로막혀 이동을 멈췄습니다. (이동: ${(actualMoveDist - remainingStepDist).toInt()}km)"
+             } else {
+                 message = "🌊 순항 중... 오늘의 운항 종료. (남은 거리: ${distToDest.toInt()}km)"
              }
         }
         
-        // 잔여 거리 차감 (실제 이동량으로 계산하면 좋겠지만, 시도한 만큼 까는게 룰)
-        val distMoved = sqrt((newX - currentShip.posX)*(newX - currentShip.posX) + (newY - currentShip.posY)*(newY - currentShip.posY))
-        val newRemainingDist = (maxDist - distMoved).coerceAtLeast(0.0)
+        // 잔여 거리 차감 (실제 이동한 만큼만 차감 or 시도한 만큼 차감? 여기선 시도한 만큼)
+        // 하지만 Stuck인 경우 억울하니까 실제 이동 거리 기반으로 계산
+        val finalMoved = actualMoveDist - remainingStepDist
+        val newRemainingDist = (maxDist - finalMoved).coerceAtLeast(0.0)
         
         val updatedShip = currentShip.copy(
             posX = newX,

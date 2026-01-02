@@ -101,7 +101,7 @@ object WorldData {
         Port(id = 23, name = "Shark Fin", posX = 3500.0, posY = 0.0, hasMarket = true),
         Port(id = 24, name = "Dolphin Cove", posX = -3500.0, posY = 0.0, hasMarket = true),
 
-        Port(id = 25, name = "Beginner's Bay", posX = 0.0, posY = 0.0, hasShipyard = true, hasTavern = true, hasMarket = true) // Center start (Still on island)
+        Port(id = 25, name = "Beginner's Bay", posX = 0.0, posY = 400.0, hasShipyard = true, hasTavern = true, hasMarket = true) // Moved further out
     )
     // Note: I will add more ports later if needed to reach exactly 25, but this is the core set.
 
