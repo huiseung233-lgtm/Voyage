@@ -28,8 +28,8 @@ android {
 
     buildTypes {
         getByName("debug") {
-            applicationIdSuffix = ".dev"
-            manifestPlaceholders["appLabel"] = "Voyage (Dev)"
+            applicationIdSuffix = ".test"
+            manifestPlaceholders["appLabel"] = "Voyage (Test)"
         }
         release {
             isMinifyEnabled = false
