@@ -143,49 +143,82 @@ class VoyageRepository(
         // 실제 이동 거리 결정
         val actualMoveDist = if (totalDistToDest <= maxDist) totalDistToDest else maxDist
         
-        // 좌표 계산
-        var newX: Double
-        var newY: Double
+        // 이동 벡터
+        val moveRatio = actualMoveDist / totalDistToDest
+        val dxMove = dx * moveRatio
+        val dyMove = dy * moveRatio
+
+        // 좌표 계산 (충돌 체크 및 슬라이딩)
+        var newX = currentShip.posX
+        var newY = currentShip.posY
         var newDestX: Double? = currentShip.destX
         var newDestY: Double? = currentShip.destY
         var newStatus = ShipStatus.SAILING
         var message = ""
-        var collisionOccurred = false
-
-        if (totalDistToDest <= maxDist) {
-            // 목적지 도착 가능
-            newX = currentShip.destX!!
-            newY = currentShip.destY!!
+        
+        // 1. Try moving diagonally (Ideal)
+        val tryX = currentShip.posX + dxMove
+        val tryY = currentShip.posY + dyMove
+        
+        if (!WorldData.isLand(tryX, tryY)) {
+            newX = tryX
+            newY = tryY
+        } else {
+            // Collision detected! Try Sliding.
+            // 2. Try moving X only
+            val tryXOnly = currentShip.posX + dxMove
+            val canMoveX = !WorldData.isLand(tryXOnly, currentShip.posY)
             
-            // [Collision Check]
-            if (WorldData.isLand(newX, newY)) {
-                collisionOccurred = true
+            // 3. Try moving Y only
+            val tryYOnly = currentShip.posY + dyMove
+            val canMoveY = !WorldData.isLand(currentShip.posX, tryYOnly)
+            
+            if (canMoveX && !canMoveY) {
+                newX = tryXOnly
+                // Y blocked -> Slide along X
+                message = "🚧 육지를 따라 우회합니다. (X축 이동)"
+            } else if (!canMoveX && canMoveY) {
+                newY = tryYOnly
+                // X blocked -> Slide along Y
+                message = "🚧 육지를 따라 우회합니다. (Y축 이동)"
+            } else if (canMoveX && canMoveY) {
+                // Both axes free individually but corner blocked?
+                // Or maybe just pick one? Pick the one with larger progress.
+                if (kotlin.math.abs(dxMove) > kotlin.math.abs(dyMove)) {
+                    newX = tryXOnly
+                } else {
+                    newY = tryYOnly
+                }
+                message = "🚧 육지 모서리를 우회합니다."
             } else {
+                // Both blocked -> Stuck
+                message = "⛔ 전방이 완전히 막혔습니다!"
+                newStatus = ShipStatus.ANCHORED // Stop
                 newDestX = null
                 newDestY = null
-                newStatus = ShipStatus.ANCHORED
-                message = "⚓ 목적지 도착 완료! (이동: ${actualMoveDist.toInt()}km)"
             }
+        }
+
+        // 목적지 도착 체크
+        if (totalDistToDest <= maxDist && !WorldData.isLand(currentShip.destX!!, currentShip.destY!!)) {
+             // 원래 목적지에 도달 가능한 경우 (그리고 그곳이 육지가 아닌 경우)
+             if (sqrt((newX - currentShip.destX!!)*(newX - currentShip.destX!!) + (newY - currentShip.destY!!)*(newY - currentShip.destY!!)) < GameConstants.ARRIVAL_THRESHOLD) {
+                 newX = currentShip.destX!!
+                 newY = currentShip.destY!!
+                 newDestX = null
+                 newDestY = null
+                 newStatus = ShipStatus.ANCHORED
+                 message = "⚓ 목적지 도착 완료! (이동: ${actualMoveDist.toInt()}km)"
+             }
         } else {
-            // 가다가 멈춤
-            newX = currentShip.posX + (dx / totalDistToDest) * actualMoveDist
-            newY = currentShip.posY + (dy / totalDistToDest) * actualMoveDist
-            
-            // [Collision Check]
-            if (WorldData.isLand(newX, newY)) {
-                collisionOccurred = true
-            } else {
-                newStatus = ShipStatus.SAILING 
-                message = "🌊 순항 중... 오늘의 운항 종료. (이동: ${actualMoveDist.toInt()}km, 남은 거리: ${(totalDistToDest - actualMoveDist).toInt()}km)"
-            }
+             if (message.isEmpty()) {
+                 message = "🌊 순항 중... 오늘의 운항 종료. (남은 거리: ${(totalDistToDest - actualMoveDist).toInt()}km)"
+             }
         }
         
-        if (collisionOccurred) {
-            return "⛔ 전방에 육지가 있어 이동할 수 없습니다! 항로를 변경하세요."
-        }
-        
-        // 잔여 거리 차감
-        val newRemainingDist = maxDist - actualMoveDist
+        // 잔여 거리 차감 (실제 이동량으로 계산하면 좋겠지만, 시도한 만큼 까는게 룰)
+        val distMoved = sqrt((newX - currentShip.posX)*(newX - currentShip.posX) + (newY - currentShip.posY)*(newY - currentShip.posY))
+        val newRemainingDist = (maxDist - distMoved).coerceAtLeast(0.0)
         
         val updatedShip = currentShip.copy(
             posX = newX,

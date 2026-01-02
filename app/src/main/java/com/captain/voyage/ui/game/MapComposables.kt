@@ -162,7 +162,7 @@ fun WorldMapView(
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
                     isCameraLocked = false
-                    zoomScale = (zoomScale * zoom).coerceIn(0.5f, 3f)
+                    zoomScale = (zoomScale * zoom).coerceIn(0.05f, 3f)
                     manualOffset += pan / zoomScale 
                 }
             }
