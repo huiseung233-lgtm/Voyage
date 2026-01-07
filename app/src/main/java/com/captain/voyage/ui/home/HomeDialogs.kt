@@ -458,14 +458,14 @@ fun AddRecordDialog(
     onSave: (String, Int) -> Unit
 ) {
     var content by remember { mutableStateOf("") }
-    var scoreStr by remember { mutableStateOf("") }
+    var score by remember { mutableStateOf(0) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = VoyageBackgroundParchment,
         title = { Text("직접 기록 추가", color = Color(0xFF3E2723)) },
         text = {
-            Column {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
@@ -473,21 +473,67 @@ fun AddRecordDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = voyageTextFieldColors()
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text("점수 (Score)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = scoreStr,
-                    onValueChange = { if (it.all { c -> c.isDigit() || c == '-' }) scoreStr = it },
-                    label = { Text("점수 (예: 10, -5)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = voyageTextFieldColors()
-                )
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Decrease Buttons
+                    Button(
+                        onClick = { score -= 10 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63)),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.width(36.dp).height(36.dp)
+                    ) { Text("-10", fontSize = 10.sp) }
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    Button(
+                        onClick = { score -= 1 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63)),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.width(36.dp).height(36.dp)
+                    ) { Text("-1", fontSize = 10.sp) }
+
+                    // Score Display
+                    Text(
+                        text = "$score",
+                        modifier = Modifier
+                            .width(60.dp)
+                            .padding(horizontal = 8.dp),
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFF3E2723),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+
+                    // Increase Buttons
+                    Button(
+                        onClick = { score += 1 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63)),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.width(36.dp).height(36.dp)
+                    ) { Text("+1", fontSize = 10.sp) }
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Button(
+                        onClick = { score += 10 },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63)),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.width(36.dp).height(36.dp)
+                    ) { Text("+10", fontSize = 10.sp) }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val score = scoreStr.toIntOrNull() ?: 0
                     if (content.isNotBlank()) {
                         onSave(content, score)
                     }

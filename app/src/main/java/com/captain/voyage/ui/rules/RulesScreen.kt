@@ -352,9 +352,9 @@ fun RuleEditorDialog(
                 Text("보상 점수 (Reward)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Button(
-                        onClick = { reward -= 5 },
+                        onClick = { reward -= 1 },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
-                    ) { Text("-5", color = Color.White) }
+                    ) { Text("-1", color = Color.White) }
                     Text(
                         text = "$reward",
                         modifier = Modifier
@@ -366,9 +366,9 @@ fun RuleEditorDialog(
                         fontSize = 18.sp
                     )
                     Button(
-                        onClick = { reward += 5 },
+                        onClick = { reward += 1 },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
-                    ) { Text("+5", color = Color.White) }
+                    ) { Text("+1", color = Color.White) }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -377,9 +377,9 @@ fun RuleEditorDialog(
                 Text("패널티 점수 (Penalty)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Button(
-                        onClick = { penalty -= 5 },
+                        onClick = { penalty += 1 },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
-                    ) { Text("-5", color = Color.White) }
+                    ) { Text("+1", color = Color.White) }
                     Text(
                         text = "$penalty",
                         modifier = Modifier
@@ -391,9 +391,9 @@ fun RuleEditorDialog(
                         fontSize = 18.sp
                     )
                     Button(
-                        onClick = { penalty += 5 },
+                        onClick = { penalty -= 1 },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))
-                    ) { Text("+5", color = Color.White) }
+                    ) { Text("-1", color = Color.White) }
                 }
             }
         },
