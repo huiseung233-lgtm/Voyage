@@ -294,7 +294,13 @@ class GameViewModel @Inject constructor(
             // 2. 잔여 거리가 없으면, 오늘 점호를 받았는지 확인 (GoalRepo)
             val hasBriefed = goalRepository.hasBriefedToday()
             if (hasBriefed) {
-                _toastMessage.value = "🌙 오늘의 항해력을 모두 소모했습니다. 내일 다시 출항하세요!"
+                // [Fix] 연료가 없어도 정박 상태라면 출항(SAILING) 상태로 전환은 허용 (일지 작성을 위해)
+                if (currentShip.status == ShipStatus.ANCHORED) {
+                    voyageRepository.undockShip() // 상태만 SAILING으로 변경하는 함수 호출 필요
+                    _toastMessage.value = "⚓ 출항했습니다. (항해력이 없어 이동은 불가능합니다)"
+                } else {
+                    _toastMessage.value = "🌙 오늘의 항해력을 모두 소모했습니다. 내일 다시 출항하세요!"
+                }
                 return@launch
             }
 

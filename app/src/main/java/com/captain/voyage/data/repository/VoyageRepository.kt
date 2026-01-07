@@ -36,6 +36,14 @@ class VoyageRepository(
         isDockingProcess = false // 프로세스 종료
     }
 
+    // [New] 정박 해제 함수 (SAILING으로 복귀)
+    suspend fun undockShip() {
+        val currentShip = voyageDao.getShip().first() ?: return
+        val updatedShip = currentShip.copy(status = ShipStatus.SAILING)
+        saveShip(updatedShip)
+        startVoyage()
+    }
+
     // ----------------------------------------------------------------
     // 1. 규칙(Rules) 관련 업무 (Core)
     // ----------------------------------------------------------------
