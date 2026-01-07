@@ -7,6 +7,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
@@ -90,8 +91,7 @@ class ScoreOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
-            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            0, // Clear flags to allow focus
             PixelFormat.TRANSLUCENT
         )
 
@@ -101,6 +101,26 @@ class ScoreOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
             setViewTreeLifecycleOwner(this@ScoreOverlayService)
             setViewTreeSavedStateRegistryOwner(this@ScoreOverlayService)
             setViewTreeViewModelStoreOwner(this@ScoreOverlayService)
+
+            // [Fix] Handle Back Button in Overlay Service
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                    stopSelf()
+                    true
+                } else {
+                    false
+                }
+            }
+            
+            // Request focus when attached to window
+            addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    v.requestFocus()
+                }
+                override fun onViewDetachedFromWindow(v: View) {}
+            })
             
             setContent {
                 VoyageTheme {
@@ -111,15 +131,14 @@ class ScoreOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .clickable { stopSelf() },
+                            .background(Color.Black.copy(alpha = 0.5f)),
                         contentAlignment = Alignment.Center
                     ) {
                         if (initialRecords != null) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(0.95f)
-                                    .height(700.dp)
+                                    .fillMaxWidth(0.85f)
+                                    .height(550.dp)
                                     .clickable(enabled = false) {}
                             ) {
                                 LogbookContent(

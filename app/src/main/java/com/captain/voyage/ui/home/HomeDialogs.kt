@@ -4,6 +4,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -240,31 +241,31 @@ fun LogbookContent(
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5DC)),
         elevation = CardDefaults.cardElevation(8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "📜 $date 항해 일지", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
-                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Close") }
+                Text(text = "📜 $date 항해 일지", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+                IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Close, contentDescription = "Close") }
             }
             
             // Total Score
             val dayScore = tempRecords.sumOf { it.score }
             Text(
                 text = "기록 예정 합계 : ${if (dayScore > 0) "+" else ""}$dayScore P",
-                fontSize = 16.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF5D4037),
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 4.dp)
             )
             HorizontalDivider(color = Color(0xFF8D6E63))
 
             // List
-            Text("임시 기록 내역", modifier = Modifier.padding(top = 8.dp), fontSize = 12.sp, color = Color.Gray)
-            LazyColumn(modifier = Modifier.weight(1f).background(Color.White, RoundedCornerShape(4.dp)).padding(8.dp)) {
+            Text("임시 기록 내역", modifier = Modifier.padding(top = 4.dp), fontSize = 11.sp, color = Color.Gray)
+            LazyColumn(modifier = Modifier.height(135.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(6.dp)) {
                 items(tempRecords) { record ->
                     LogRecordItem(record) { 
                         // [New] 삭제 시 토스트 메시지
@@ -275,25 +276,56 @@ fun LogbookContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             HorizontalDivider(color = Color(0xFF8D6E63))
 
-            // Rule Selection
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("규칙 적용", fontSize = 12.sp, color = Color.Gray)
-                Button(onClick = { showAddCustomDialog = true }, modifier = Modifier.height(32.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63))) {
-                    Text("직접 입력", fontSize = 12.sp)
+            // Rule Selection & Search (Combined Row - Slim version)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Custom Slim Search Field
+                androidx.compose.foundation.text.BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(32.dp)
+                        .background(Color.White, RoundedCornerShape(4.dp))
+                        .border(1.dp, Color.Gray.copy(alpha = 0.5f), RoundedCornerShape(4.dp)),
+                    singleLine = true,
+                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
+                    decorationBox = { innerTextField ->
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (searchQuery.isEmpty()) {
+                                    Text("규칙 검색...", fontSize = 12.sp, color = Color.Gray)
+                                }
+                                innerTextField()
+                            }
+                            Icon(Icons.Default.Search, null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                        }
+                    }
+                )
+                
+                Button(
+                    onClick = { showAddCustomDialog = true },
+                    modifier = Modifier.height(32.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8D6E63)),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text("직접 입력", fontSize = 11.sp)
                 }
             }
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("규칙 검색...") },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                trailingIcon = { Icon(Icons.Default.Search, null) },
-                singleLine = true
-            )
-            LazyColumn(modifier = Modifier.weight(1f).background(Color.White, RoundedCornerShape(4.dp)).padding(8.dp)) {
+            
+            LazyColumn(modifier = Modifier.weight(1f).background(Color.White, RoundedCornerShape(4.dp)).padding(6.dp)) {
                 val filteredRules = if (searchQuery.isBlank()) rules else rules.filter { it.title.contains(searchQuery, ignoreCase = true) }
                 items(filteredRules) { rule ->
                     LogRuleItem(rule) { isSuccess ->
@@ -316,16 +348,16 @@ fun LogbookContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Save Button
             Button(
                 onClick = { onSave(tempRecords) },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(44.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("⚓ 항해 일지 최종 저장", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("⚓ 항해 일지 최종 저장", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
     }
@@ -355,17 +387,29 @@ fun LogbookContent(
 
 @Composable
 fun LogRecordItem(record: ScoreRecord, onDelete: () -> Unit) {
+    // Time formatting
+    val timeStr = remember(record.timestamp) {
+        val instant = java.time.Instant.ofEpochMilli(record.timestamp)
+        val zoneId = java.time.ZoneId.systemDefault()
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+        instant.atZone(zoneId).format(formatter)
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = record.ruleTitle, fontWeight = FontWeight.Medium, color = Color.Black)
-            Text(text = "${record.score} P", fontSize = 12.sp, color = if (record.score >= 0) Color(0xFF4CAF50) else Color.Red)
+            Text(text = record.ruleTitle, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "${record.score} P", fontSize = 11.sp, color = if (record.score >= 0) Color(0xFF4CAF50) else Color.Red)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = timeStr, fontSize = 11.sp, color = Color.Gray)
+            }
         }
-        IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+        IconButton(onClick = onDelete, modifier = Modifier.size(20.dp)) {
             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Gray)
         }
     }
@@ -374,34 +418,34 @@ fun LogRecordItem(record: ScoreRecord, onDelete: () -> Unit) {
 @Composable
 fun LogRuleItem(rule: Rule, onClick: (Boolean) -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5DC))
     ) {
         Row(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = rule.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
-                Text(text = "+${rule.defaultScore} / ${rule.penalty}", fontSize = 12.sp, color = Color(0xFF5D4037))
+                Text(text = rule.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+                Text(text = "+${rule.defaultScore} / ${rule.penalty}", fontSize = 10.sp, color = Color(0xFF5D4037))
             }
             Row {
                 Button(
                     onClick = { onClick(true) },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                    modifier = Modifier.height(30.dp).width(50.dp).padding(horizontal = 2.dp),
+                    modifier = Modifier.height(26.dp).width(40.dp).padding(horizontal = 1.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("O", fontSize = 12.sp)
+                    Text("O", fontSize = 10.sp)
                 }
                 Button(
                     onClick = { onClick(false) },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                    modifier = Modifier.height(30.dp).width(50.dp).padding(horizontal = 2.dp),
+                    modifier = Modifier.height(26.dp).width(40.dp).padding(horizontal = 1.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("X", fontSize = 12.sp)
+                    Text("X", fontSize = 10.sp)
                 }
             }
         }
